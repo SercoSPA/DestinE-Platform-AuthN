@@ -1,0 +1,64 @@
+name: default
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build_test:
+    name: build_test
+    runs-on: ubuntu-latest
+    env:
+      DESPAUTH_USER: ${{ secrets.DESPAUTH_USER }}
+      DESPAUTH_PASSWORD: ${{ secrets.DESPAUTH_PASSWORD }}
+    steps:
+    - name: Clone repo
+      uses: actions/checkout@v6
+    - name: Set up python
+      uses: actions/setup-python@v6
+      with:
+        python-version: 3.11
+        cache: 'pip'
+    - name: Install dependencies
+      run: pip install -e ".[dev]"
+    - name: Run tests
+      run: pytest
+    - name: Highway authentication
+      run: python -c "from destinepyauth import get_token; get_token('highway')"
+    - name: CacheB authentication
+      run: python -c "from destinepyauth import get_token; get_token('cacheb', write_netrc=True)"
+    - name: DestinE Streamer authentication
+      run: python -c "from destinepyauth import get_token; get_token('streamer')"
+    - name: Insula authentication
+      run: python -c "from destinepyauth import get_token; get_token('insula')"
+    - name: Eden authentication
+      run: python -c "from destinepyauth import get_token; get_token('eden')"
+    - name: DEA authentication
+      run: python -c "from destinepyauth import get_token; get_token('dea')"
+
+  run_pre-commit:
+    name: run_pre-commit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v6
+      - name: run pre-commit
+        uses: pre-commit/action@v3.0.1
+
+  check_changelog:
+    name: check_changelog
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v6
+      - name: check changelog
+        uses: tarides/changelog-check-action@v3
+        with:
+          changelog: CHANGELOG.md

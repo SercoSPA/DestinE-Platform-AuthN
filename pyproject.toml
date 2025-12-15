@@ -1,0 +1,48 @@
+[project]
+name = "destinepyauth"
+dynamic = ["version"]
+description = "Harmonized Python script for DestinE authentication."
+authors = [
+    { name = "David Purnell", email = "davejpurnell@gmail.com" }
+]
+readme = "README.md"
+license = { text = "Apache 2.0" }
+requires-python = ">= 3.9"
+keywords = ["DestinE", "authentication"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "conflator",
+    "lxml",
+    "pydantic",
+    "requests",
+    "authlib",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "pre-commit",
+  "pytest",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
+
+[project.scripts]
+destinepyauth = "destinepyauth.auth:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["destinepyauth*"]
+
+[tool.setuptools.package-data]
+destinepyauth = ["*.pickle"]
