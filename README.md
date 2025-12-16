@@ -82,3 +82,19 @@ result = get_token("highway")
 
 This ensures credentials cannot be accidentally exposed in terminal logs, screen recordings,
 or shell history.
+
+## Adding a new service
+
+To integrate a new DestinE service, add an entry to the `_REGISTRY` dictionary in the [ServiceRegistry class](./destinepyauth/services.py):
+
+```python
+"your_service": {
+    "scope": "openid offline_access",  # OAuth scopes required
+    "defaults": {
+        "iam_client": "your-client-id",  # From service's IAM registration
+        "iam_redirect_uri": "https://your-service.destine.eu/",  # OAuth redirect
+    },
+    # Optional: only if post-authentication processing is needed
+    # "post_auth_hook": your_custom_hook_function,
+},
+```
