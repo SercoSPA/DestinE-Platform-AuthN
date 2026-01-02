@@ -39,6 +39,14 @@ class TokenResult:
         return self.access_token
 
 
+@dataclass(frozen=True)
+class OtpChallenge:
+    """Represents an OTP step required by the IdP during login."""
+
+    action_url: str
+    field_name: str
+
+
 class AuthenticationService:
     """Service for handling DESP OAuth2 authentication flows."""
 
@@ -123,18 +131,78 @@ class AuthenticationService:
             timeout=10,
         )
 
+    def _extract_page_error(self, response: requests.Response) -> Optional[str]:
+        """Best-effort extraction of a human-readable error message from HTML pages."""
+        try:
+            tree = html.fromstring(response.content)
+        except Exception:
+            return None
+
+        xpaths = [
+            # Keycloak classic login error
+            '//span[@id="input-error"]/text()',
+            # Keycloak feedback banner
+            '//*[contains(@class, "kc-feedback-text")]/text()',
+            # Some templates render field errors with different ids
+            '//*[starts-with(@id, "input-error")]/text()',
+        ]
+        for xp in xpaths:
+            texts = tree.xpath(xp)
+            if texts:
+                msg = " ".join(t.strip() for t in texts if str(t).strip()).strip()
+                if msg:
+                    return msg
+        return None
+
+    def _parse_otp_challenge(self, response: requests.Response) -> Optional[OtpChallenge]:
+        """Detect whether the response contains an OTP form and extract its action and field name."""
+        try:
+            tree = html.fromstring(response.content)
+            forms = getattr(tree, "forms", [])
+        except Exception:
+            return None
+
+        candidate_names = {"otp", "totp", "totpCode", "otpCode", "oneTimePassword"}
+
+        for form in forms:
+            try:
+                inputs = getattr(form, "inputs", [])
+            except Exception:
+                inputs = []
+
+            for inp in inputs:
+                name = getattr(inp, "name", None)
+                if not name:
+                    continue
+                if name in candidate_names or "otp" in name.lower() or "totp" in name.lower():
+                    action = getattr(form, "action", None)
+                    if action:
+                        return OtpChallenge(action_url=str(action), field_name=str(name))
+
+        return None
+
+    @handle_http_errors("Failed to submit OTP")
+    def _submit_otp(self, otp_action_url: str, otp_field_name: str, otp_code: str) -> requests.Response:
+        """Submit an OTP code to the IdP challenge form."""
+        # Keycloak typically accepts an extra "login" field; include it for compatibility.
+        data = {
+            otp_field_name: otp_code,
+            "login": "Sign In",
+        }
+        return self.session.post(
+            otp_action_url,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data=data,
+            allow_redirects=False,
+            timeout=10,
+        )
+
     def _extract_auth_code(self, login_response: requests.Response) -> str:
         """Extract the authorization code from the login response redirect."""
         if login_response.status_code == 200:
-            try:
-                tree = html.fromstring(login_response.content)
-                error_msg = tree.xpath('//span[@id="input-error"]/text()')
-                if error_msg:
-                    raise AuthenticationError(f"Login failed: {error_msg[0].strip()}")
-            except AuthenticationError:
-                raise
-            except Exception:
-                pass
+            page_error = self._extract_page_error(login_response)
+            if page_error:
+                raise AuthenticationError(f"Login failed: {page_error}")
             raise AuthenticationError("Login failed: Invalid credentials")
 
         if login_response.status_code != 302:
@@ -292,7 +360,12 @@ class AuthenticationService:
             logger.error(f"Token verification failed: {e}")
             return None
 
-    def login(self, write_netrc: bool = False) -> TokenResult:
+    def login(
+        self,
+        write_netrc: bool = False,
+        otp: Optional[str] = None,
+        otp_provider: Optional[Callable[[], str]] = None,
+    ) -> TokenResult:
         """
         Execute the full authentication flow.
 
@@ -312,7 +385,26 @@ class AuthenticationService:
         # Get login form action, submit credentials and extract auth code
         auth_action_url = self._get_auth_url_action()
         login_response = self._perform_login(auth_action_url, user, password)
-        auth_code = self._extract_auth_code(login_response)
+
+        # If the IdP requests OTP/2FA, the first POST returns an HTML form (200)
+        # instead of a redirect (302). Detect that and complete the OTP step.
+        if login_response.status_code == 200:
+            challenge = self._parse_otp_challenge(login_response)
+            if challenge:
+                otp_code = otp
+                if otp_code is None and otp_provider is not None:
+                    otp_code = otp_provider()
+                if otp_code is None:
+                    otp_code = getpass.getpass("OTP code: ")
+
+                otp_response = self._submit_otp(challenge.action_url, challenge.field_name, otp_code)
+                auth_code = self._extract_auth_code(otp_response)
+            else:
+                # No OTP challenge detected; treat as a normal login failure.
+                auth_code = self._extract_auth_code(login_response)
+        else:
+            auth_code = self._extract_auth_code(login_response)
+
         token_data = self._exchange_code_for_token(auth_code)
 
         if not token_data:
