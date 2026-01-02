@@ -371,8 +371,6 @@ class AuthenticationService:
     def login_2fa(
         self,
         write_netrc: bool = False,
-        otp: Optional[str] = None,
-        otp_provider: Optional[Callable[[], str]] = None,
     ) -> TokenResult:
         """Execute the authentication flow with an explicit OTP step.
 
@@ -380,8 +378,6 @@ class AuthenticationService:
 
         Args:
             write_netrc: If True, write/update the token in ~/.netrc file.
-            otp: Optional OTP code (non-interactive use).
-            otp_provider: Optional callable that returns an OTP code.
 
         Returns:
             TokenResult containing the access token and decoded payload.
@@ -395,11 +391,7 @@ class AuthenticationService:
 
         otp_action_url = self._extract_otp_action(login_response)
 
-        otp_code = otp
-        if otp_code is None and otp_provider is not None:
-            otp_code = otp_provider()
-        if otp_code is None:
-            otp_code = getpass.getpass("OTP code: ")
+        otp_code = getpass.getpass("OTP code: ")
 
         otp_response = self._submit_otp(otp_action_url, otp_code)
         auth_code = self._extract_auth_code(otp_response)
