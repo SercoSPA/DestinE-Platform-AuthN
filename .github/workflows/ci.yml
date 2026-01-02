@@ -25,17 +25,17 @@ jobs:
     - name: Run tests
       run: pytest
     - name: Highway authentication
-      run: python -c "from destinepyauth import get_token; get_token('highway')"
+      run: python -c "from destinepyauth import get_token; get_token('highway', twofa=False)"
     - name: CacheB authentication
-      run: python -c "from destinepyauth import get_token; get_token('cacheb', write_netrc=True)"
+      run: python -c "from destinepyauth import get_token; get_token('cacheb', write_netrc=True, twofa=False)"
     - name: DestinE Streamer authentication
-      run: python -c "from destinepyauth import get_token; get_token('streamer')"
+      run: python -c "from destinepyauth import get_token; get_token('streamer', twofa=False)"
     - name: Insula authentication
-      run: python -c "from destinepyauth import get_token; get_token('insula')"
+      run: python -c "from destinepyauth import get_token; get_token('insula', twofa=False)"
     - name: Eden authentication
-      run: python -c "from destinepyauth import get_token; get_token('eden')"
+      run: python -c "from destinepyauth import get_token; get_token('eden', twofa=False)"
     - name: DEA authentication
-      run: python -c "from destinepyauth import get_token; get_token('dea')"
+      run: python -c "from destinepyauth import get_token; get_token('dea', twofa=False)"
 
   run_pre-commit:
     name: run_pre-commit

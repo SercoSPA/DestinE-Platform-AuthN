@@ -57,6 +57,12 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "--twofa",
+        action="store_true",
+        help="Use explicit 2FA (OTP) login flow",
+    )
+
+    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -77,12 +83,6 @@ def main() -> None:
         "-n",
         action="store_true",
         help="Write/update token in ~/.netrc file for the service host",
-    )
-
-    parser.add_argument(
-        "--twofa",
-        action="store_true",
-        help="Use explicit 2FA (OTP) login flow",
     )
 
     parser.add_argument(
