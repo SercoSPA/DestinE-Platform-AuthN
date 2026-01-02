@@ -86,13 +86,6 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "--otp",
-        type=str,
-        default=None,
-        help="OTP code for non-interactive 2FA (used with --twofa)",
-    )
-
-    parser.add_argument(
         "--print",
         "-p",
         action="store_true",
@@ -120,7 +113,7 @@ def main() -> None:
             post_auth_hook=hook,
         )
         if args.twofa:
-            result = auth_service.login_2fa(write_netrc=args.netrc, otp=args.otp)
+            result = auth_service.login_2fa(write_netrc=args.netrc)
         else:
             result = auth_service.login(write_netrc=args.netrc)
 
