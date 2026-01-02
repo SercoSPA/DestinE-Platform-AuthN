@@ -156,9 +156,15 @@ class AuthenticationService:
     def _extract_auth_code(self, login_response: requests.Response) -> str:
         """Extract the authorization code from the login response redirect."""
         if login_response.status_code == 200:
-            page_error = self._extract_page_error(login_response)
-            if page_error:
-                raise AuthenticationError(f"Login failed: {page_error}")
+            try:
+                tree = html.fromstring(login_response.content)
+                error_msg = tree.xpath('//span[@id="input-error"]/text()')
+                if error_msg:
+                    raise AuthenticationError(f"Login failed: {error_msg[0].strip()}")
+            except AuthenticationError:
+                raise
+            except Exception:
+                pass
             raise AuthenticationError("Login failed: Invalid credentials")
 
         if login_response.status_code != 302:
@@ -319,8 +325,6 @@ class AuthenticationService:
     def login(
         self,
         write_netrc: bool = False,
-        otp: Optional[str] = None,
-        otp_provider: Optional[Callable[[], str]] = None,
     ) -> TokenResult:
         """
         Execute the full authentication flow.
@@ -341,26 +345,7 @@ class AuthenticationService:
         # Get login form action, submit credentials and extract auth code
         auth_action_url = self._get_auth_url_action()
         login_response = self._perform_login(auth_action_url, user, password)
-
-        # If the IdP requests OTP/2FA, the first POST returns an HTML form (200)
-        # instead of a redirect (302). Detect that and complete the OTP step.
-        if login_response.status_code == 200:
-            challenge = self._parse_otp_challenge(login_response)
-            if challenge:
-                otp_code = otp
-                if otp_code is None and otp_provider is not None:
-                    otp_code = otp_provider()
-                if otp_code is None:
-                    otp_code = getpass.getpass("OTP code: ")
-
-                otp_response = self._submit_otp(challenge.action_url, challenge.field_name, otp_code)
-                auth_code = self._extract_auth_code(otp_response)
-            else:
-                # No OTP challenge detected; treat as a normal login failure.
-                auth_code = self._extract_auth_code(login_response)
-        else:
-            auth_code = self._extract_auth_code(login_response)
-
+        auth_code = self._extract_auth_code(login_response)
         token_data = self._exchange_code_for_token(auth_code)
 
         if not token_data:
