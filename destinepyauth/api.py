@@ -49,11 +49,7 @@ def get_token(
         post_auth_hook=hook,
     )
 
-    result = (
-        auth_service.login_2fa(write_netrc=write_netrc)
-        if twofa
-        else auth_service.login(write_netrc=write_netrc)
-    )
+    result = auth_service.login(write_netrc=write_netrc, twofa=twofa)
 
     if not write_netrc:
         return result

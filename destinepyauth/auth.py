@@ -112,10 +112,7 @@ def main() -> None:
             scope=scope,
             post_auth_hook=hook,
         )
-        if args.twofa:
-            result = auth_service.login_2fa(write_netrc=args.netrc)
-        else:
-            result = auth_service.login(write_netrc=args.netrc)
+        result = auth_service.login(write_netrc=args.netrc, twofa=args.twofa)
 
         # Output the token
         if args.print:

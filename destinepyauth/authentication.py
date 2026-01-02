@@ -334,12 +334,14 @@ class AuthenticationService:
 
     def login(
         self,
+        twofa: bool,
         write_netrc: bool = False,
     ) -> TokenResult:
         """
         Execute the full authentication flow.
 
         Args:
+            twofa: If True, follow 2FA auth flow.
             write_netrc: If True, write/update the token in ~/.netrc file.
 
         Returns:
@@ -355,7 +357,13 @@ class AuthenticationService:
         # Get login form action, submit credentials and extract auth code
         auth_action_url = self._get_auth_url_action()
         login_response = self._perform_login(auth_action_url, user, password)
-        auth_code = self._extract_auth_code(login_response)
+        if not twofa:
+            auth_code = self._extract_auth_code(login_response)
+        else:
+            otp_action_url = self._extract_otp_action(login_response)
+            otp_code = self._get_otp()
+            otp_response = self._submit_otp(otp_action_url, otp_code)
+            auth_code = self._extract_auth_code(otp_response)
         token_data = self._exchange_code_for_token(auth_code)
 
         if not token_data:
@@ -372,53 +380,6 @@ class AuthenticationService:
 
         if write_netrc:
             # Write refresh token to .netrc
-            if not refresh_token:
-                raise AuthenticationError("No token available to write to .netrc")
-            self._write_netrc(refresh_token)
-
-        return TokenResult(access_token=access_token, refresh_token=refresh_token, decoded=self.decoded_token)
-
-    def login_2fa(
-        self,
-        write_netrc: bool = False,
-    ) -> TokenResult:
-        """Execute the authentication flow with an explicit OTP step.
-
-        This is an opt-in flow. The default `login()` behavior is unchanged.
-
-        Args:
-            write_netrc: If True, write/update the token in ~/.netrc file.
-
-        Returns:
-            TokenResult containing the access token and decoded payload.
-        """
-        user, password = self._get_credentials()
-
-        logger.info(f"Authenticating on {self.config.iam_url}")
-
-        auth_action_url = self._get_auth_url_action()
-        login_response = self._perform_login(auth_action_url, user, password)
-
-        otp_action_url = self._extract_otp_action(login_response)
-
-        otp_code = self._get_otp()
-
-        otp_response = self._submit_otp(otp_action_url, otp_code)
-        auth_code = self._extract_auth_code(otp_response)
-        token_data = self._exchange_code_for_token(auth_code)
-
-        if not token_data:
-            raise AuthenticationError("Failed to obtain token data")
-
-        access_token = token_data.get("access_token")
-        refresh_token = token_data.get("refresh_token")
-
-        if self.post_auth_hook and access_token:
-            access_token = self.post_auth_hook(access_token, self.config)
-
-        self.decoded_token = self._verify_and_decode(access_token)
-
-        if write_netrc:
             if not refresh_token:
                 raise AuthenticationError("No token available to write to .netrc")
             self._write_netrc(refresh_token)
