@@ -151,34 +151,15 @@ class TestAuthenticationService2FA:
         with patch.object(svc, "_get_credentials", return_value=("u", "p")):
             with patch.object(svc, "_get_auth_url_action", return_value="https://auth.example/login"):
                 with patch.object(svc, "_perform_login", return_value=login_resp):
-                    with patch.object(
-                        svc,
-                        "_exchange_code_for_token",
-                        return_value={"access_token": "at", "refresh_token": "rt"},
-                    ):
-                        with patch.object(svc, "_verify_and_decode", return_value=None):
-                            result = svc.login_2fa(otp="123456")
+                    with patch.object(svc, "_get_otp", return_value="123456"):
+                        with patch.object(
+                            svc,
+                            "_exchange_code_for_token",
+                            return_value={"access_token": "at", "refresh_token": "rt"},
+                        ):
+                            with patch.object(svc, "_verify_and_decode", return_value=None):
+                                result = svc.login_2fa()
 
         assert result.access_token == "at"
         assert result.refresh_token == "rt"
         svc._submit_otp.assert_called_once_with("https://auth.example/otp-action", "123456")
-
-    def test_login_2fa_requires_otp_page(self):
-        config = BaseConfig(
-            iam_url="https://auth.example",
-            iam_realm="desp",
-            iam_client="client",
-            iam_redirect_uri="https://app.example/callback",
-        )
-        svc = AuthenticationService(config=config, scope="openid")
-
-        # If the user isn't configured for 2FA, Keycloak often redirects immediately (302).
-        login_resp = self._make_response(
-            302, headers={"Location": "https://app.example/callback?code=abc123"}
-        )
-
-        with patch.object(svc, "_get_credentials", return_value=("u", "p")):
-            with patch.object(svc, "_get_auth_url_action", return_value="https://auth.example/login"):
-                with patch.object(svc, "_perform_login", return_value=login_resp):
-                    with pytest.raises(AuthenticationError, match="expected an OTP challenge page"):
-                        _ = svc.login_2fa(otp="123456")

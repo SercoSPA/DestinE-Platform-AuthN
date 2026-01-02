@@ -90,6 +90,16 @@ class AuthenticationService:
         password = self.config.password if self.config.password else getpass.getpass("Password: ")
         return user, password
 
+    def _get_otp(self) -> str:
+        """
+        Retrieve user OTP from interactive prompt.
+
+        Returns:
+            String of OTP.
+        """
+        otp_code = getpass.getpass("OTP: ")
+        return otp_code
+
     @handle_http_errors("Failed to get login page")
     def _get_auth_url_action(self) -> str:
         """Fetch the login page and extract the form action URL."""
@@ -391,7 +401,7 @@ class AuthenticationService:
 
         otp_action_url = self._extract_otp_action(login_response)
 
-        otp_code = getpass.getpass("OTP code: ")
+        otp_code = self._get_otp()
 
         otp_response = self._submit_otp(otp_action_url, otp_code)
         auth_code = self._extract_auth_code(otp_response)
