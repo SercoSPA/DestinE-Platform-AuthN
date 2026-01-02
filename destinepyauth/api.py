@@ -11,6 +11,8 @@ def get_token(
     service: str,
     write_netrc: bool = False,
     verbose: bool = False,
+    twofa: bool = False,
+    otp: Optional[str] = None,
 ) -> Optional[TokenResult]:
     """
     Authenticate and get an access token for a DESP service.
@@ -23,6 +25,8 @@ def get_token(
         service: Service name (e.g., 'highway', 'cacheb', 'eden').
         write_netrc: If True, write/update the token in ~/.netrc file.
         verbose: If True, enable DEBUG logging.
+        twofa: If True, use explicit 2FA (OTP) login flow.
+        otp: OTP code for non-interactive 2FA (used when twofa=True).
 
     Returns:
         TokenResult containing the access token and decoded payload.
@@ -47,7 +51,11 @@ def get_token(
         post_auth_hook=hook,
     )
 
-    result = auth_service.login(write_netrc=write_netrc)
+    result = (
+        auth_service.login_2fa(write_netrc=write_netrc, otp=otp)
+        if twofa
+        else auth_service.login(write_netrc=write_netrc)
+    )
 
     if not write_netrc:
         return result

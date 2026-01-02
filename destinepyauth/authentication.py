@@ -131,68 +131,32 @@ class AuthenticationService:
             timeout=10,
         )
 
-    def _extract_page_error(self, response: requests.Response) -> Optional[str]:
-        """Best-effort extraction of a human-readable error message from HTML pages."""
+    def _extract_otp_action(self, login_response: requests.Response) -> str:
+        """Extract the OTP form action URL from a 2FA challenge page."""
+        if login_response.status_code != 200:
+            raise AuthenticationError(
+                "2FA login expected an OTP challenge page (HTTP 200) after submitting credentials"
+            )
+
         try:
-            tree = html.fromstring(response.content)
-        except Exception:
-            return None
-
-        xpaths = [
-            # Keycloak classic login error
-            '//span[@id="input-error"]/text()',
-            # Keycloak feedback banner
-            '//*[contains(@class, "kc-feedback-text")]/text()',
-            # Some templates render field errors with different ids
-            '//*[starts-with(@id, "input-error")]/text()',
-        ]
-        for xp in xpaths:
-            texts = tree.xpath(xp)
-            if texts:
-                msg = " ".join(t.strip() for t in texts if str(t).strip()).strip()
-                if msg:
-                    return msg
-        return None
-
-    def _parse_otp_challenge(self, response: requests.Response) -> Optional[OtpChallenge]:
-        """Detect whether the response contains an OTP form and extract its action and field name."""
-        try:
-            tree = html.fromstring(response.content)
-            forms = getattr(tree, "forms", [])
-        except Exception:
-            return None
-
-        candidate_names = {"otp", "totp", "totpCode", "otpCode", "oneTimePassword"}
-
-        for form in forms:
-            try:
-                inputs = getattr(form, "inputs", [])
-            except Exception:
-                inputs = []
-
-            for inp in inputs:
-                name = getattr(inp, "name", None)
-                if not name:
-                    continue
-                if name in candidate_names or "otp" in name.lower() or "totp" in name.lower():
-                    action = getattr(form, "action", None)
-                    if action:
-                        return OtpChallenge(action_url=str(action), field_name=str(name))
-
-        return None
+            tree = html.fromstring(login_response.content.decode())
+            forms = tree.forms
+            if not forms:
+                raise AuthenticationError("No OTP form found in response")
+            return str(forms[0].action)
+        except AuthenticationError:
+            raise
+        except (ParserError, AttributeError) as e:
+            raise AuthenticationError(f"Failed to parse OTP page: {e}")
 
     @handle_http_errors("Failed to submit OTP")
-    def _submit_otp(self, otp_action_url: str, otp_field_name: str, otp_code: str) -> requests.Response:
-        """Submit an OTP code to the IdP challenge form."""
-        # Keycloak typically accepts an extra "login" field; include it for compatibility.
-        data = {
-            otp_field_name: otp_code,
-            "login": "Sign In",
-        }
+    def _submit_otp(self, otp_action_url: str, otp_code: str) -> requests.Response:
+        """Submit an OTP code to the IdP OTP form."""
+        # Match the example flow: urlencoded payload with "otp" and "login" fields.
         return self.session.post(
             otp_action_url,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data=data,
+            data={"otp": otp_code, "login": "Sign In"},
             allow_redirects=False,
             timeout=10,
         )
@@ -421,6 +385,61 @@ class AuthenticationService:
 
         if write_netrc:
             # Write refresh token to .netrc
+            if not refresh_token:
+                raise AuthenticationError("No token available to write to .netrc")
+            self._write_netrc(refresh_token)
+
+        return TokenResult(access_token=access_token, refresh_token=refresh_token, decoded=self.decoded_token)
+
+    def login_2fa(
+        self,
+        write_netrc: bool = False,
+        otp: Optional[str] = None,
+        otp_provider: Optional[Callable[[], str]] = None,
+    ) -> TokenResult:
+        """Execute the authentication flow with an explicit OTP step.
+
+        This is an opt-in flow. The default `login()` behavior is unchanged.
+
+        Args:
+            write_netrc: If True, write/update the token in ~/.netrc file.
+            otp: Optional OTP code (non-interactive use).
+            otp_provider: Optional callable that returns an OTP code.
+
+        Returns:
+            TokenResult containing the access token and decoded payload.
+        """
+        user, password = self._get_credentials()
+
+        logger.info(f"Authenticating on {self.config.iam_url}")
+
+        auth_action_url = self._get_auth_url_action()
+        login_response = self._perform_login(auth_action_url, user, password)
+
+        otp_action_url = self._extract_otp_action(login_response)
+
+        otp_code = otp
+        if otp_code is None and otp_provider is not None:
+            otp_code = otp_provider()
+        if otp_code is None:
+            otp_code = getpass.getpass("OTP code: ")
+
+        otp_response = self._submit_otp(otp_action_url, otp_code)
+        auth_code = self._extract_auth_code(otp_response)
+        token_data = self._exchange_code_for_token(auth_code)
+
+        if not token_data:
+            raise AuthenticationError("Failed to obtain token data")
+
+        access_token = token_data.get("access_token")
+        refresh_token = token_data.get("refresh_token")
+
+        if self.post_auth_hook and access_token:
+            access_token = self.post_auth_hook(access_token, self.config)
+
+        self.decoded_token = self._verify_and_decode(access_token)
+
+        if write_netrc:
             if not refresh_token:
                 raise AuthenticationError("No token available to write to .netrc")
             self._write_netrc(refresh_token)
