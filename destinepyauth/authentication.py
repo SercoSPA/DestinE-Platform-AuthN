@@ -39,14 +39,6 @@ class TokenResult:
         return self.access_token
 
 
-@dataclass(frozen=True)
-class OtpChallenge:
-    """Represents an OTP step required by the IdP during login."""
-
-    action_url: str
-    field_name: str
-
-
 class AuthenticationService:
     """Service for handling DESP OAuth2 authentication flows."""
 
