@@ -158,7 +158,7 @@ class TestAuthenticationService2FA:
                             return_value={"access_token": "at", "refresh_token": "rt"},
                         ):
                             with patch.object(svc, "_verify_and_decode", return_value=None):
-                                result = svc.login(twofa=True)
+                                result = svc.login()
 
         assert result.access_token == "at"
         assert result.refresh_token == "rt"

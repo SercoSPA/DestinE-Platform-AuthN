@@ -57,12 +57,6 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "--twofa",
-        action="store_true",
-        help="Use explicit 2FA (OTP) login flow",
-    )
-
-    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -112,7 +106,7 @@ def main() -> None:
             scope=scope,
             post_auth_hook=hook,
         )
-        result = auth_service.login(write_netrc=args.netrc, twofa=args.twofa)
+        result = auth_service.login(write_netrc=args.netrc)
 
         # Output the token
         if args.print:

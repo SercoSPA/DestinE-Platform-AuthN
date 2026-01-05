@@ -135,11 +135,6 @@ class AuthenticationService:
 
     def _extract_otp_action(self, login_response: requests.Response) -> str:
         """Extract the OTP form action URL from a 2FA challenge page."""
-        if login_response.status_code != 200:
-            raise AuthenticationError(
-                "2FA login expected an OTP challenge page (HTTP 200) after submitting credentials"
-            )
-
         try:
             tree = html.fromstring(login_response.content.decode())
             forms = tree.forms
@@ -163,23 +158,15 @@ class AuthenticationService:
             timeout=10,
         )
 
+    def _extract_otp_auth_code(self, login_response: requests.Response) -> str:
+        """Provide OTP and extract the authorization code from the login response redirect."""
+        otp_action_url = self._extract_otp_action(login_response)
+        otp_code = self._get_otp()
+        otp_response = self._submit_otp(otp_action_url, otp_code)
+        return self._extract_auth_code(otp_response)
+
     def _extract_auth_code(self, login_response: requests.Response) -> str:
         """Extract the authorization code from the login response redirect."""
-        if login_response.status_code == 200:
-            try:
-                tree = html.fromstring(login_response.content)
-                error_msg = tree.xpath('//span[@id="input-error"]/text()')
-                if error_msg:
-                    raise AuthenticationError(f"Login failed: {error_msg[0].strip()}")
-            except AuthenticationError:
-                raise
-            except Exception:
-                pass
-            raise AuthenticationError("Login failed: Invalid credentials")
-
-        if login_response.status_code != 302:
-            raise AuthenticationError(f"Login failed: Unexpected status {login_response.status_code}")
-
         location = login_response.headers.get("Location", "")
         parsed = parse_qs(urlparse(location).query)
 
@@ -334,14 +321,12 @@ class AuthenticationService:
 
     def login(
         self,
-        twofa: bool,
         write_netrc: bool = False,
     ) -> TokenResult:
         """
         Execute the full authentication flow.
 
         Args:
-            twofa: If True, follow 2FA auth flow.
             write_netrc: If True, write/update the token in ~/.netrc file.
 
         Returns:
@@ -357,13 +342,12 @@ class AuthenticationService:
         # Get login form action, submit credentials and extract auth code
         auth_action_url = self._get_auth_url_action()
         login_response = self._perform_login(auth_action_url, user, password)
-        if not twofa:
+        if login_response.status_code == 200:
+            auth_code = self._extract_otp_auth_code(login_response)
+        elif login_response.status_code == 302:
             auth_code = self._extract_auth_code(login_response)
         else:
-            otp_action_url = self._extract_otp_action(login_response)
-            otp_code = self._get_otp()
-            otp_response = self._submit_otp(otp_action_url, otp_code)
-            auth_code = self._extract_auth_code(otp_response)
+            raise AuthenticationError(f"Login failed: Unexpected status {login_response.status_code}")
         token_data = self._exchange_code_for_token(auth_code)
 
         if not token_data:

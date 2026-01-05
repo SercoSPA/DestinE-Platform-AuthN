@@ -9,7 +9,6 @@ from destinepyauth.services import ConfigurationFactory
 
 def get_token(
     service: str,
-    twofa: bool,
     write_netrc: bool = False,
     verbose: bool = False,
 ) -> Optional[TokenResult]:
@@ -22,7 +21,6 @@ def get_token(
 
     Args:
         service: Service name (e.g., 'highway', 'cacheb', 'eden').
-        twofa: If True, use explicit 2FA (OTP) login flow.
         write_netrc: If True, write/update the token in ~/.netrc file.
         verbose: If True, enable DEBUG logging.
 
@@ -49,7 +47,7 @@ def get_token(
         post_auth_hook=hook,
     )
 
-    result = auth_service.login(write_netrc=write_netrc, twofa=twofa)
+    result = auth_service.login(write_netrc=write_netrc)
 
     if not write_netrc:
         return result
