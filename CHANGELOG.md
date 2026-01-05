@@ -12,7 +12,7 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 ## added
 
-- 2FA support: users must now specify if they have 2FA enabled when authenticating
+- 2FA support: users will be prompted to enter OTP if 2FA is enabled
 - instructions for adding a new service
 
 ## [0.2.3] - 12-12-2025

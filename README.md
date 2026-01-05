@@ -16,33 +16,16 @@ The main entry point is the `get_token()` function:
 from destinepyauth import get_token
 
 # Authenticate (prompts for credentials if not in environment)
-result = get_token("highway", twofa=False)
+result = get_token("highway")
 
 # Access the token
 token = result.access_token
 ```
 ### Two Factor Authentication
 
-`get_token()` requires you to explicitly choose whether to use a 2FA (OTP) login flow.
-
-- Use `twofa=True` if your DestinE account has 2FA enabled (you will be prompted for an OTP from your authenticator app).
-- Use `twofa=False` if your account does not have 2FA enabled.
-
-If you pick the wrong setting, authentication will fail (e.g., accounts with 2FA enabled typically require the OTP step).
+If you have 2FA enabled, you will be prompted to enter an OTP from your authenticator app.
 
 You can enable/disable 2FA in your [DestinE platform account settings](https://auth.destine.eu/realms/desp/account/).
-
-Examples:
-
-```python
-from destinepyauth import get_token
-
-# Account without 2FA
-result = get_token("highway", twofa=False)
-
-# Account with 2FA enabled
-result = get_token("highway", twofa=True)
-```
 
 ### Using with requests
 
@@ -50,7 +33,7 @@ result = get_token("highway", twofa=True)
 from destinepyauth import get_token
 import requests
 
-result = get_token("eden", twofa=False)
+result = get_token("eden")
 headers = {"Authorization": f"Bearer {result.access_token}"}
 response = requests.get("https://api.example.com/data", headers=headers)
 ```
@@ -97,7 +80,7 @@ for both username and password - nothing you type will be visible on screen:
 
 ```python
 from destinepyauth import get_token
-result = get_token("highway", twofa=False)
+result = get_token("highway")
 # Username:   (hidden input)
 # Password:   (hidden input)
 ```
