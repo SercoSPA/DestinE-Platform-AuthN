@@ -8,6 +8,9 @@ import pytest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+from unittest.mock import MagicMock
+
+import requests
 
 from destinepyauth.configs import BaseConfig
 from destinepyauth.authentication import AuthenticationService
@@ -111,3 +114,52 @@ class TestAuthenticationServiceNetrc:
 
             with pytest.raises(AuthenticationError, match="no host configured"):
                 auth_service._write_netrc("test_token")
+
+
+class TestAuthenticationService2FA:
+    def _make_response(
+        self, status_code: int, content: str = "", headers: dict | None = None
+    ) -> requests.Response:
+        resp = requests.Response()
+        resp.status_code = status_code
+        resp._content = content.encode("utf-8")
+        resp.headers = headers or {}
+        return resp
+
+    def test_login_2fa_happy_path(self):
+        config = BaseConfig(
+            iam_url="https://auth.example",
+            iam_realm="desp",
+            iam_client="client",
+            iam_redirect_uri="https://app.example/callback",
+        )
+        svc = AuthenticationService(config=config, scope="openid")
+
+        otp_page = """
+        <html><body>
+          <form action='https://auth.example/otp-action'>
+            <input type='text' name='otp'/>
+          </form>
+        </body></html>
+        """.strip()
+
+        login_resp = self._make_response(200, content=otp_page)
+        otp_resp = self._make_response(302, headers={"Location": "https://app.example/callback?code=abc123"})
+
+        svc._submit_otp = MagicMock(return_value=otp_resp)
+
+        with patch.object(svc, "_get_credentials", return_value=("u", "p")):
+            with patch.object(svc, "_get_auth_url_action", return_value="https://auth.example/login"):
+                with patch.object(svc, "_perform_login", return_value=login_resp):
+                    with patch.object(svc, "_get_otp", return_value="123456"):
+                        with patch.object(
+                            svc,
+                            "_exchange_code_for_token",
+                            return_value={"access_token": "at", "refresh_token": "rt"},
+                        ):
+                            with patch.object(svc, "_verify_and_decode", return_value=None):
+                                result = svc.login()
+
+        assert result.access_token == "at"
+        assert result.refresh_token == "rt"
+        svc._submit_otp.assert_called_once_with("https://auth.example/otp-action", "123456")

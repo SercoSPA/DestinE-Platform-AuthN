@@ -21,6 +21,11 @@ result = get_token("highway")
 # Access the token
 token = result.access_token
 ```
+### Two Factor Authentication
+
+If you have 2FA enabled, you will be prompted to enter an OTP from your authenticator app.
+
+You can enable/disable 2FA in your [DestinE platform account settings](https://auth.destine.eu/realms/desp/account/).
 
 ### Using with requests
 
