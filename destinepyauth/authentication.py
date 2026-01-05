@@ -158,13 +158,6 @@ class AuthenticationService:
             timeout=10,
         )
 
-    def _extract_otp_auth_code(self, login_response: requests.Response) -> str:
-        """Provide OTP and extract the authorization code from the login response redirect."""
-        otp_action_url = self._extract_otp_action(login_response)
-        otp_code = self._get_otp()
-        otp_response = self._submit_otp(otp_action_url, otp_code)
-        return self._extract_auth_code(otp_response)
-
     def _extract_auth_code(self, login_response: requests.Response) -> str:
         """Extract the authorization code from the login response redirect."""
         location = login_response.headers.get("Location", "")
@@ -342,10 +335,23 @@ class AuthenticationService:
         # Get login form action, submit credentials and extract auth code
         auth_action_url = self._get_auth_url_action()
         login_response = self._perform_login(auth_action_url, user, password)
-        if login_response.status_code == 200:
-            auth_code = self._extract_otp_auth_code(login_response)
-        elif login_response.status_code == 302:
+        if login_response.status_code == 302:
+            # 302 means success with no OTP required
             auth_code = self._extract_auth_code(login_response)
+        elif login_response.status_code == 200:
+            # 200 can be either: (a) login error page, or (b) OTP challenge page
+            try:
+                tree = html.fromstring(login_response.content)
+            except (ParserError, ValueError, TypeError) as e:
+                raise AuthenticationError(f"Login failed: could not parse IdP HTML (HTTP 200): {e}")
+            error_msg = tree.xpath('//span[@id="input-error"]/text()')
+            if error_msg:
+                raise AuthenticationError(f"Login failed: {error_msg[0].strip()}")
+            # No explicit error => treat as OTP challenge, but fail if OTP form can't be extracted
+            otp_action_url = self._extract_otp_action(login_response)
+            otp_code = self._get_otp()
+            otp_response = self._submit_otp(otp_action_url, otp_code)
+            auth_code = self._extract_auth_code(otp_response)
         else:
             raise AuthenticationError(f"Login failed: Unexpected status {login_response.status_code}")
         token_data = self._exchange_code_for_token(auth_code)
