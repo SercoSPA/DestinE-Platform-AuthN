@@ -14,6 +14,10 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 - authentication for polytope
 
+## fix
+
+- add small leeway (30s) for token verification to avoid errors about token being issued in the future
+
 ## [1.0.0] - 05-01-2026
 
 ## added

@@ -256,12 +256,13 @@ class AuthenticationService:
 
         logger.info(f"Updated .netrc entry for {self.netrc_host}")
 
-    def _verify_and_decode(self, token: str) -> Optional[Dict[str, Any]]:
+    def _verify_and_decode(self, token: str, leeway: int = 30) -> Optional[Dict[str, Any]]:
         """
         Verify the token signature and decode the payload.
 
         Args:
             token: The JWT access token to verify.
+            leeway: time leeway to avoid 'token was issued in future' errors.
 
         Returns:
             The decoded token payload, or None if verification fails.
@@ -303,7 +304,7 @@ class AuthenticationService:
                 },
             )
             # Standard claims validation (exp, nbf, iat, iss)
-            claims.validate()
+            claims.validate(leeway=leeway)
             claims = dict(claims)
             logger.info("Token verified successfully")
             logger.debug(json.dumps(claims, indent=2))
