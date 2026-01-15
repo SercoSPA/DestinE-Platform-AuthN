@@ -13,6 +13,7 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 ## added
 
 - authentication for polytope
+- authentication for data lake HDA
 
 ## fix
 

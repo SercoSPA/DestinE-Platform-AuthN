@@ -63,6 +63,13 @@ class ServiceRegistry:
                 "iam_redirect_uri": "https://polytope.lumi.apps.dte.destination-earth.eu/",
             },
         },
+        "hda": {
+            "scope": "openid",
+            "defaults": {
+                "iam_client": "dedl-hda",
+                "iam_redirect_uri": "https://hda.data.destination-earth.eu/stac",
+            },
+        },
     }
 
     @classmethod
