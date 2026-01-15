@@ -56,6 +56,13 @@ class ServiceRegistry:
             },
             "post_auth_hook": highway_token_exchange,
         },
+        "polytope": {
+            "scope": "openid offline_access",
+            "defaults": {
+                "iam_client": "polytope-api-public",
+                "iam_redirect_uri": "https://polytope.lumi.apps.dte.destination-earth.eu/",
+            },
+        },
     }
 
     @classmethod
