@@ -38,14 +38,10 @@ def get_token(
     logging.getLogger("destinepyauth").setLevel(log_level)
 
     # Load configuration for the service
-    config, scope, hook = ConfigurationFactory.load_config(service)
+    config = ConfigurationFactory.load_config(service)
 
     # Create and run authentication
-    auth_service = AuthenticationService(
-        config=config,
-        scope=scope,
-        post_auth_hook=hook,
-    )
+    auth_service = AuthenticationService(config=config)
 
     result = auth_service.login(write_netrc=write_netrc)
 

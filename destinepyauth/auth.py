@@ -98,14 +98,10 @@ def main() -> None:
 
     try:
         # Load configuration
-        config, scope, hook = ConfigurationFactory.load_config(args.SERVICE)
+        config = ConfigurationFactory.load_config(args.SERVICE)
 
         # Initialize and execute authentication
-        auth_service = AuthenticationService(
-            config=config,
-            scope=scope,
-            post_auth_hook=hook,
-        )
+        auth_service = AuthenticationService(config=config)
         result = auth_service.login(write_netrc=args.netrc)
 
         # Output the token
