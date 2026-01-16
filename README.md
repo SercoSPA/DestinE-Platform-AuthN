@@ -67,7 +67,6 @@ ds = xr.open_dataset(
 - `hda` - Harmonized Data Access (includes token exchange)
 - `highway` - Highway service (includes token exchange)
 - `insula` - Insula service
-- `polytope` - Polytope API
 - `streamer` - Streaming service
 
 ## Configuration

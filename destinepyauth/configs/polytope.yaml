@@ -1,3 +1,0 @@
-scope: openid offline_access
-iam_client: polytope-api-public
-iam_redirect_uri: https://polytope.lumi.apps.dte.destination-earth.eu/
