@@ -5,7 +5,7 @@ from typing import Dict, Any, Tuple, Callable, Optional
 from conflator import Conflator
 
 from destinepyauth.configs import BaseConfig
-from destinepyauth.hooks import highway_token_exchange
+from destinepyauth.hooks import highway_token_exchange, dedl_token_exchange
 
 
 class ServiceRegistry:
@@ -69,6 +69,7 @@ class ServiceRegistry:
                 "iam_client": "dedl-hda",
                 "iam_redirect_uri": "https://hda.data.destination-earth.eu/stac",
             },
+            "post_auth_hook": dedl_token_exchange,
         },
     }
 
