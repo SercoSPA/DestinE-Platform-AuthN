@@ -64,9 +64,38 @@ ds = xr.open_dataset(
 - `cacheb` - CacheB data service
 - `dea` - DEA service
 - `eden` - Eden broker
+- `hda` - Harmonized Data Access (includes token exchange)
 - `highway` - Highway service (includes token exchange)
 - `insula` - Insula service
+- `polytope` - Polytope API
 - `streamer` - Streaming service
+
+## Configuration
+
+Service configurations are stored in YAML files in the `destinepyauth/configs/` directory. Each service has its own configuration file (e.g., `highway.yaml`, `cacheb.yaml`) that defines default values for authentication parameters.
+
+### Configuration Priority
+
+The library uses [Conflator](https://github.com/ecmwf/conflator) to merge configurations from multiple sources, with the following priority (highest to lowest):
+
+1. **Command-line arguments** (e.g., `--iam-client my-client`)
+2. **Environment variables** (e.g., `DESPAUTH_IAM_CLIENT=my-client`)
+3. **User config files** (e.g., `~/.despauth.yaml`)
+4. **Service defaults** (from `destinepyauth/configs/{service}.yaml`)
+
+This allows you to override any service default without modifying the package.
+
+### Example: Override IAM Client
+
+```bash
+# Via environment variable
+export DESPAUTH_IAM_CLIENT=my-custom-client
+python -c "from destinepyauth import get_token; get_token('highway')"
+
+# Via user config file
+echo "iam_client: my-custom-client" > ~/.despauth.yaml
+python -c "from destinepyauth import get_token; get_token('highway')"
+```
 
 ## Credential Handling
 
@@ -91,16 +120,39 @@ You can enable/disable 2FA in your [DestinE platform account settings](https://a
 
 ## Adding a new service
 
-To integrate a new DestinE service, add an entry to the `_REGISTRY` dictionary in the [ServiceRegistry class](./destinepyauth/services.py):
+To integrate a new DestinE service, create a YAML configuration file in `destinepyauth/configs/{service_name}.yaml`:
 
-```python
-"your_service": {
-    "scope": "openid offline_access",  # OAuth scopes required
-    "defaults": {
-        "iam_client": "your-client-id",  # From service's IAM registration
-        "iam_redirect_uri": "https://your-service.destine.eu/",  # OAuth redirect
-    },
-    # Optional: only if post-authentication processing is needed
-    # "post_auth_hook": your_custom_hook_function,
-},
+```yaml
+# Example: myservice.yaml
+scope: openid offline_access
+iam_client: myservice-public
+iam_redirect_uri: https://myservice.destine.eu/
+
+# Optional: Token exchange configuration (only if needed)
+exchange_config:
+  token_url: https://identity.example.com/token
+  audience: myservice-public
+  subject_issuer: desp-oidc
+  client_id: myservice-public
 ```
+
+The service will be automatically discovered and available via `get_token("myservice")`.
+
+### Service Configuration Fields
+
+- **`scope`**: OAuth2 scopes (e.g., `"openid"`, `"openid offline_access"`)
+- **`iam_client`**: Client ID registered with the IAM
+- **`iam_redirect_uri`**: OAuth redirect URI for the service
+- **`iam_url`** (optional): IAM server URL (defaults to `https://auth.destine.eu`)
+- **`iam_realm`** (optional): IAM realm (defaults to `desp`)
+
+### Token Exchange
+
+Some services (like Highway and HDA) require token exchange because they validate tokens against a different issuer than the initial login. For these services, add an `exchange_config` section:
+
+- **`token_url`**: Token exchange endpoint
+- **`audience`**: Target audience for the exchanged token
+- **`subject_issuer`**: Subject issuer identifier
+- **`client_id`**: Client ID for the exchange request
+
+The library automatically handles token exchange using [RFC 8693](https://datatracker.ietf.org/doc/html/rfc8693) when `exchange_config` is present.

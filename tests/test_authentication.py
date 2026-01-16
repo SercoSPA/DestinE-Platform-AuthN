@@ -28,10 +28,7 @@ class TestAuthenticationServiceNetrc:
         )
 
         with patch("destinepyauth.authentication.KeycloakOpenID", create=True):
-            auth_service = AuthenticationService(
-                config=config,
-                scope="openid",
-            )
+            auth_service = AuthenticationService(config=config)
 
             assert auth_service.netrc_host == "example.com"
 
@@ -45,7 +42,6 @@ class TestAuthenticationServiceNetrc:
         with patch("destinepyauth.authentication.KeycloakOpenID", create=True):
             auth_service = AuthenticationService(
                 config=config,
-                scope="openid",
                 netrc_host="custom.host.com",
             )
 
@@ -60,7 +56,6 @@ class TestAuthenticationServiceNetrc:
                 netrc_path = Path(tmpdir) / ".netrc"
                 auth_service = AuthenticationService(
                     config=config,
-                    scope="openid",
                     netrc_host="example.com",
                 )
 
@@ -91,7 +86,6 @@ class TestAuthenticationServiceNetrc:
 
                 auth_service = AuthenticationService(
                     config=config,
-                    scope="openid",
                     netrc_host="example.com",
                 )
 
@@ -108,7 +102,6 @@ class TestAuthenticationServiceNetrc:
         with patch("destinepyauth.authentication.KeycloakOpenID", create=True):
             auth_service = AuthenticationService(
                 config=config,
-                scope="openid",
                 netrc_host=None,
             )
 
@@ -133,7 +126,7 @@ class TestAuthenticationService2FA:
             iam_client="client",
             iam_redirect_uri="https://app.example/callback",
         )
-        svc = AuthenticationService(config=config, scope="openid")
+        svc = AuthenticationService(config=config)
 
         otp_page = """
         <html><body>
