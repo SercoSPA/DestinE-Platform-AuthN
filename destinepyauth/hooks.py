@@ -1,30 +1,16 @@
-"""
-Service-specific hooks for token exchange and post-authentication processing.
-"""
+"""Token exchange helper used by service registry."""
 
 import logging
 from typing import Dict, Any, Optional
 
 import requests
 
-from destinepyauth.configs import BaseConfig
-from destinepyauth.exceptions import handle_http_errors, AuthenticationError
+from destinepyauth.exceptions import AuthenticationError
 
 logger = logging.getLogger(__name__)
 
 # Token exchange grant type per RFC 8693
 TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange"
-
-# Highway service constants
-HIGHWAY_TOKEN_URL = "https://highway.esa.int/sso/auth/realms/highway/protocol/openid-connect/token"
-HIGHWAY_AUDIENCE = "highway-public"
-HIGHWAY_ISSUER = "DESP_IAM_PROD"
-
-# DEDL / HDA exchange constants
-DEDL_TOKEN_URL = "https://identity.data.destination-earth.eu/auth/realms/dedl/protocol/openid-connect/token"
-DEDL_CLIENT_ID = "hda-public"
-DEDL_AUDIENCE = "hda-public"
-DEDL_SUBJECT_ISSUER = "desp-oidc"
 
 
 def token_exchange(
@@ -74,50 +60,3 @@ def token_exchange(
         raise AuthenticationError("No access token in exchange response")
 
     return exchanged_token
-
-
-@handle_http_errors("Highway token exchange failed")
-def highway_token_exchange(access_token: str, config: BaseConfig) -> str:
-    """
-    Exchange a DESP access token for a Highway access token.
-
-    Args:
-        access_token: The DESP access token to exchange.
-        config: Configuration containing client credentials.
-
-    Returns:
-        The Highway access token string.
-
-    Raises:
-        AuthenticationError: If the token exchange fails.
-    """
-    if not config.iam_client:
-        raise AuthenticationError("Highway token exchange requires iam_client")
-
-    highway_token = token_exchange(
-        token_url=HIGHWAY_TOKEN_URL,
-        subject_token=access_token,
-        client_id=config.iam_client,
-        audience=HIGHWAY_AUDIENCE,
-        subject_issuer=HIGHWAY_ISSUER,
-        timeout=10,
-    )
-
-    logger.info("Token exchange successful")
-    return highway_token
-
-
-@handle_http_errors("DEDL token exchange failed")
-def dedl_token_exchange(access_token: str, config: BaseConfig) -> str:
-    """Exchange a DESP token for a DEDL/HDA token accepted by HDA."""
-    _ = config  # kept for hook signature consistency
-    dedl_token = token_exchange(
-        token_url=DEDL_TOKEN_URL,
-        subject_token=access_token,
-        client_id=DEDL_CLIENT_ID,
-        audience=DEDL_AUDIENCE,
-        subject_issuer=DEDL_SUBJECT_ISSUER,
-        timeout=10,
-    )
-    logger.info("Token exchange successful")
-    return dedl_token

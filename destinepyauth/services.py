@@ -5,7 +5,7 @@ from typing import Dict, Any, Tuple, Callable, Optional
 from conflator import Conflator
 
 from destinepyauth.configs import BaseConfig
-from destinepyauth.hooks import highway_token_exchange, dedl_token_exchange
+from destinepyauth.hooks import token_exchange
 
 
 class ServiceRegistry:
@@ -51,10 +51,14 @@ class ServiceRegistry:
             "scope": "openid",
             "defaults": {
                 "iam_client": "highway-public",
-                # Highway uses a special redirect URI for DESP broker
                 "iam_redirect_uri": "https://highway.esa.int/sso/auth/realms/highway/broker/DESP_IAM_PROD/endpoint",
             },
-            "post_auth_hook": highway_token_exchange,
+            "token_exchange": {
+                "token_url": "https://highway.esa.int/sso/auth/realms/highway/protocol/openid-connect/token",
+                "audience": "highway-public",
+                "subject_issuer": "DESP_IAM_PROD",
+                "client_id": "highway-public",
+            },
         },
         "polytope": {
             "scope": "openid offline_access",
@@ -69,7 +73,12 @@ class ServiceRegistry:
                 "iam_client": "dedl-hda",
                 "iam_redirect_uri": "https://hda.data.destination-earth.eu/stac",
             },
-            "post_auth_hook": dedl_token_exchange,
+            "token_exchange": {
+                "token_url": "https://identity.data.destination-earth.eu/auth/realms/dedl/protocol/openid-connect/token",
+                "audience": "hda-public",
+                "subject_issuer": "desp-oidc",
+                "client_id": "hda-public",
+            },
         },
     }
 
@@ -120,7 +129,7 @@ class ConfigurationFactory:
         service_info = ServiceRegistry.get_service_info(service_name)
         scope: str = service_info["scope"]
         defaults: Dict[str, Any] = service_info.get("defaults", {})
-        hook: Optional[Callable[[str, BaseConfig], str]] = service_info.get("post_auth_hook")
+        exchange_cfg: Optional[Dict[str, Any]] = service_info.get("token_exchange")
 
         # Load configuration using Conflator
         config: BaseConfig = Conflator("despauth", BaseConfig).load()
@@ -130,5 +139,24 @@ class ConfigurationFactory:
             current_value = getattr(config, key, None)
             if current_value is None:
                 setattr(config, key, default_value)
+
+        # If no explicit hook is provided, optionally build a token-exchange hook from registry config.
+        if exchange_cfg is not None:
+            token_url = exchange_cfg["token_url"]
+            audience = exchange_cfg["audience"]
+            subject_issuer = exchange_cfg["subject_issuer"]
+            client_id = exchange_cfg.get("client_id")
+
+            def _exchange_hook(access_token: str, cfg: BaseConfig) -> str:
+                return token_exchange(
+                    token_url=token_url,
+                    subject_token=access_token,
+                    client_id=client_id,
+                    audience=audience,
+                    subject_issuer=subject_issuer,
+                    timeout=10,
+                )
+
+            hook = _exchange_hook
 
         return config, scope, hook
