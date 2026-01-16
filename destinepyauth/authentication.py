@@ -6,7 +6,7 @@ import logging
 import stat
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
-from typing import Tuple, Optional, Callable, Dict, Any
+from typing import Tuple, Optional, Dict, Any
 from dataclasses import dataclass
 
 import base64
@@ -45,22 +45,18 @@ class AuthenticationService:
     def __init__(
         self,
         config: BaseConfig,
-        scope: str,
-        post_auth_hook: Optional[Callable[[str, BaseConfig], str]] = None,
         netrc_host: Optional[str] = None,
     ) -> None:
         """
         Initialize the authentication service.
 
         Args:
-            config: Configuration containing IAM URL, realm, client, and credentials.
-            scope: OAuth2 scope string (e.g., 'openid', 'openid offline_access').
-            post_auth_hook: Optional callable for post-auth token processing.
+            config: Configuration containing IAM URL, realm, client, credentials, scope, and exchange_config.
             netrc_host: Hostname for .netrc entry. If None, extracted from redirect_uri.
         """
         self.config = config
-        self.scope = scope
-        self.post_auth_hook = post_auth_hook
+        self.scope = config.scope
+        self.exchange_config = config.exchange_config
         self.decoded_token: Optional[Dict[str, Any]] = None
         self.session = requests.Session()
         self.jwks_uri: Optional[str] = None
@@ -75,6 +71,9 @@ class AuthenticationService:
         logger.debug(f"  Redirect URI: {self.config.iam_redirect_uri}")
         logger.debug(f"  Scope: {self.scope}")
         logger.debug(f"  Netrc Host: {self.netrc_host}")
+
+        if self.exchange_config:
+            logger.debug("Exchange config loaded")
 
     def _get_credentials(self) -> Tuple[str, str]:
         """
@@ -313,6 +312,63 @@ class AuthenticationService:
             logger.error(f"Token verification failed: {e}")
             return None
 
+    @handle_http_errors("Failed to exchange token")
+    def _exchange_token(self, subject_token: str) -> str:
+        """
+        Exchange an OAuth2 access token using the token-exchange grant.
+
+        This is used when a service validates tokens against a different issuer
+        than the one used for the initial interactive login.
+
+        Args:
+            subject_token: The original access token to exchange.
+
+        Returns:
+            The exchanged access token.
+
+        Raises:
+            AuthenticationError: If exchange fails or config is missing.
+        """
+        if not self.exchange_config:
+            raise AuthenticationError("No exchange configuration provided")
+
+        data: Dict[str, Any] = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+            "subject_token": subject_token,
+            "subject_issuer": self.exchange_config.subject_issuer,
+            "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
+            "client_id": self.exchange_config.client_id,
+            "audience": self.exchange_config.audience,
+        }
+
+        logger.debug("Exchanging token via RFC8693")
+        logger.debug(f"Token URL: {self.exchange_config.token_url}")
+        logger.debug(f"Client ID: {self.exchange_config.client_id}")
+        logger.debug(f"Audience: {self.exchange_config.audience}")
+        logger.debug(f"Subject issuer: {self.exchange_config.subject_issuer}")
+
+        response = self.session.post(
+            self.exchange_config.token_url,
+            data=data,
+            timeout=10,
+        )
+
+        if response.status_code != 200:
+            try:
+                error_data = response.json()
+                error_msg = error_data.get("error_description", error_data.get("error", "Unknown"))
+            except Exception:
+                error_msg = response.text[:200]
+            raise AuthenticationError(f"Exchange failed: {error_msg}")
+
+        result: Dict[str, Any] = response.json()
+        exchanged_token: Optional[str] = result.get("access_token")
+        if not exchanged_token:
+            raise AuthenticationError("No access token in exchange response")
+
+        logger.info("Token exchanged successfully")
+        return exchanged_token
+
     def login(
         self,
         write_netrc: bool = False,
@@ -363,8 +419,9 @@ class AuthenticationService:
         access_token = token_data.get("access_token")
         refresh_token = token_data.get("refresh_token")
 
-        if self.post_auth_hook and access_token:
-            access_token = self.post_auth_hook(access_token, self.config)
+        # Exchange token if exchange config is provided
+        if self.exchange_config and access_token:
+            access_token = self._exchange_token(access_token)
 
         # Verify and decode using access token (if available)
         self.decoded_token = self._verify_and_decode(access_token)
