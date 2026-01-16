@@ -1,0 +1,3 @@
+scope: openid
+iam_client: dea_client
+iam_redirect_uri: https://dea.destine.eu/
