@@ -1,0 +1,9 @@
+scope: openid
+iam_client: highway-public
+iam_redirect_uri: https://highway.esa.int/sso/auth/realms/highway/broker/DESP_IAM_PROD/endpoint
+
+exchange_config:
+  token_url: https://highway.esa.int/sso/auth/realms/highway/protocol/openid-connect/token
+  audience: highway-public
+  subject_issuer: DESP_IAM_PROD
+  client_id: highway-public

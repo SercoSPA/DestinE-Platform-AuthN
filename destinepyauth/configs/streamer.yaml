@@ -1,0 +1,3 @@
+scope: openid
+iam_client: streaming-fe
+iam_redirect_uri: https://streamer.destine.eu/

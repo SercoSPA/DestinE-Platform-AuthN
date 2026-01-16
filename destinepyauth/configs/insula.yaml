@@ -1,0 +1,3 @@
+scope: openid
+iam_client: insula-public
+iam_redirect_uri: https://insula.destine.eu/

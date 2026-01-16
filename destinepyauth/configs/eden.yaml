@@ -1,0 +1,3 @@
+scope: openid
+iam_client: hda-broker-public
+iam_redirect_uri: https://broker.eden.destine.eu/

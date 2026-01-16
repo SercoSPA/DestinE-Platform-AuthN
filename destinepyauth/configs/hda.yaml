@@ -1,0 +1,9 @@
+scope: openid
+iam_client: dedl-hda
+iam_redirect_uri: https://hda.data.destination-earth.eu/stac
+
+exchange_config:
+  token_url: https://identity.data.destination-earth.eu/auth/realms/dedl/protocol/openid-connect/token
+  audience: hda-public
+  subject_issuer: desp-oidc
+  client_id: hda-public
