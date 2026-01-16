@@ -15,6 +15,12 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 - authentication for polytope
 - authentication for data lake HDA
 
+## changed
+
+- refactored service configuration system to use YAML files instead of Python dictionaries
+- service configurations now stored in `destinepyauth/configs/` directory
+- improved configuration priority: CLI args → env vars → user config files → service defaults
+
 ## fix
 
 - add small leeway (30s) for token verification to avoid errors about token being issued in the future
