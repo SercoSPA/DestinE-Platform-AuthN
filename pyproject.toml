@@ -38,7 +38,7 @@ version_scheme = "post-release"
 local_scheme = "no-local-version"
 
 [project.scripts]
-destinepyauth = "destinepyauth.auth:main"
+destinepyauth = "destinepyauth.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

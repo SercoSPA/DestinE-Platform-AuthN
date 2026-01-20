@@ -2,7 +2,7 @@
 
 import logging
 
-from destinepyauth.api import get_token
+from destinepyauth.get_token import get_token
 from destinepyauth.authentication import AuthenticationService, TokenResult
 from destinepyauth.exceptions import AuthenticationError
 

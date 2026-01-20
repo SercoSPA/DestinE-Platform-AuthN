@@ -38,6 +38,8 @@ jobs:
       run: python -c "from destinepyauth import get_token; get_token('dea')"
     - name: HDA authentication
       run: python -c "from destinepyauth import get_token; get_token('hda')"
+    - name: Polytope authentication
+      run: python -c "from destinepyauth import get_token; get_token('polytope')"
 
   run_pre-commit:
     name: run_pre-commit

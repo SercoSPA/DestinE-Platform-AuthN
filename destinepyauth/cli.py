@@ -3,35 +3,11 @@
 
 import sys
 import argparse
-import json
 import logging
-from typing import Dict, Any
 
-from destinepyauth.services import ConfigurationFactory, ServiceRegistry
-from destinepyauth.authentication import AuthenticationService, TokenResult
+from destinepyauth.services import ServiceRegistry
 from destinepyauth.exceptions import AuthenticationError
-
-
-def output_token(result: TokenResult, output_format: str) -> None:
-    """
-    Output the token in the specified format.
-
-    Args:
-        result: TokenResult from authentication.
-        output_format: One of 'json', 'token'.
-    """
-    if output_format == "json":
-        output: Dict[str, Any] = {
-            "access_token": result.access_token,
-            "token_type": "Bearer",
-        }
-        if result.decoded:
-            output["decoded"] = result.decoded
-        print(json.dumps(output, indent=2))
-    elif output_format == "token":
-        print(result.access_token)
-    else:
-        raise ValueError(f"Unknown output format: {output_format}")
+from destinepyauth.get_token import get_token
 
 
 def main() -> None:
@@ -64,15 +40,6 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "--output",
-        "-o",
-        type=str,
-        choices=["json", "token"],
-        default="token",
-        help="Output format: 'json' (full JSON), 'token' (just token)",
-    )
-
-    parser.add_argument(
         "--netrc",
         "-n",
         action="store_true",
@@ -88,25 +55,11 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Configure logging
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format="%(levelname)s: %(message)s",
-        stream=sys.stderr,
-    )
-
     try:
-        # Load configuration
-        config = ConfigurationFactory.load_config(args.SERVICE)
-
-        # Initialize and execute authentication
-        auth_service = AuthenticationService(config=config)
-        result = auth_service.login(write_netrc=args.netrc)
-
+        result = get_token(args.SERVICE, write_netrc=args.netrc, verbose=args.verbose)
         # Output the token
         if args.print:
-            output_token(result, args.output)
+            print(result.access_token)
 
     except AuthenticationError as e:
         logging.error(str(e))
