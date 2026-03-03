@@ -98,17 +98,17 @@ python -c "from destinepyauth import get_token; get_token('highway')"
 
 ## Credential Handling
 
-When you call `get_token()`, the library will prompt for your credentials with **masked input**
-for both username and password - nothing you type will be visible on screen:
+When you call `get_token()`, the library will prompt for your credentials. The password
+uses **masked input** - nothing you type will be visible on screen:
 
 ```python
 from destinepyauth import get_token
 result = get_token("highway")
-# Username:   (hidden input)
+# Username: myuser
 # Password:   (hidden input)
 ```
 
-This ensures credentials cannot be accidentally exposed in terminal logs, screen recordings,
+This ensures the password cannot be accidentally exposed in terminal logs, screen recordings,
 or shell history.
 
 ### Two Factor Authentication
