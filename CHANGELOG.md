@@ -12,6 +12,7 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 # changed
 
+- Make 'print' and 'write_netrc' options mutually exclusive for CLI
 - Username and OTP are no longer masked inputs
 
 ## [1.1.0] - 20-01-2026
