@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import stat
 from unittest.mock import MagicMock
+import requests
 
 from destinepyauth.configs import BaseConfig
 from destinepyauth.authentication import AuthenticationService
@@ -130,3 +131,41 @@ class TestAuthenticationOTPFlow:
 
         with pytest.raises(AuthenticationError, match="No OTP form found"):
             auth_service._extract_otp_action(mock_response)
+
+    def test_submit_otp_posts_correct_data(self):
+        """Test that OTP submission POSTs with correct form data."""
+
+        config = BaseConfig(iam_client="test")
+        auth_service = AuthenticationService(config=config)
+
+        mock_response = MagicMock()
+        mock_response.status_code = 302
+        mock_response.headers = {"Location": "https://example.com/success"}
+
+        # Patch the session's post method
+        auth_service.session.post = MagicMock(return_value=mock_response)
+
+        result = auth_service._submit_otp("https://auth.example/otp-submit", "123456")
+
+        # Verify POST was called with correct URL and data
+        auth_service.session.post.assert_called_once_with(
+            "https://auth.example/otp-submit",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={"otp": "123456", "login": "Sign In"},
+            allow_redirects=False,
+            timeout=10,
+        )
+
+        assert result == mock_response
+
+    def test_submit_otp_handles_http_errors(self):
+        """Test that OTP submission handles HTTP errors appropriately."""
+
+        config = BaseConfig(iam_client="test")
+        auth_service = AuthenticationService(config=config)
+
+        # Simulate HTTP error on the session
+        auth_service.session.post = MagicMock(side_effect=requests.Timeout("Request timed out"))
+
+        with pytest.raises(AuthenticationError, match="Failed to submit OTP"):
+            auth_service._submit_otp("https://auth.example/otp", "123456")

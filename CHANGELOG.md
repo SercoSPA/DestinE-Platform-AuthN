@@ -12,6 +12,7 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 # added
 
+- OTP testing and config precendence
 - test_cli.py and test_get_token.py to cover core API and CLI functionality
 - test_token_ops to test token exchange and JWT verification
 
