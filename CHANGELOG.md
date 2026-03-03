@@ -10,6 +10,10 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 ## pre-release
 
+# added
+
+- test_cli.py and test_get_token.py to cover core API and CLI functionality
+
 # changed
 
 - Make 'print' and 'write_netrc' options mutually exclusive for CLI
