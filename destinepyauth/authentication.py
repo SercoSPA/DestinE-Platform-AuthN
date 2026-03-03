@@ -79,13 +79,13 @@ class AuthenticationService:
         """
         Retrieve user credentials from config or interactive prompt.
 
-        Both username and password use masked input (getpass) when prompted
+        The password uses masked input (getpass) when prompted
         to prevent credentials from appearing in terminal logs or recordings.
 
         Returns:
             Tuple of (username, password).
         """
-        user = self.config.user if self.config.user else getpass.getpass("Username: ")
+        user = self.config.user if self.config.user else input("Username: ")
         password = self.config.password if self.config.password else getpass.getpass("Password: ")
         return user, password
 
@@ -96,7 +96,7 @@ class AuthenticationService:
         Returns:
             String of OTP.
         """
-        otp_code = getpass.getpass("OTP: ")
+        otp_code = input("OTP: ")
         return otp_code
 
     @handle_http_errors("Failed to get login page")
