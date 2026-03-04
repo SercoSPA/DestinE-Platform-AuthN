@@ -137,8 +137,12 @@ class TestConfigurationPrecedenceChain:
         # Environment variable should win over any lower-priority source
         assert config.iam_url == "https://env-var-url.example.com"
 
-    def test_service_yaml_is_lowest_priority(self):
+    def test_service_yaml_is_lowest_priority(self, monkeypatch):
         """Test that service YAML is the base layer with lowest priority."""
+        # Explicitly unset any env vars that might be present in CI
+        monkeypatch.delenv("DESPAUTH_USER", raising=False)
+        monkeypatch.delenv("DESPAUTH_PASSWORD", raising=False)
+
         # No env vars, no user config - pure service YAML
         config = ConfigurationFactory.load_config("highway")
 
