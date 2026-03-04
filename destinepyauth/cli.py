@@ -39,14 +39,15 @@ def main() -> None:
         help="Enable verbose (DEBUG) logging",
     )
 
-    parser.add_argument(
+    # Create mutually exclusive group for output options
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
         "--netrc",
         "-n",
         action="store_true",
         help="Write/update token in ~/.netrc file for the service host",
     )
-
-    parser.add_argument(
+    output_group.add_argument(
         "--print",
         "-p",
         action="store_true",

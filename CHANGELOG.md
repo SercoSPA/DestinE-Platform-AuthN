@@ -10,9 +10,21 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 ## pre-release
 
+# added
+
+- OTP testing and config precendence
+- test_cli.py and test_get_token.py to cover core API and CLI functionality
+- test_token_ops to test token exchange and JWT verification
+
 # changed
 
+- Simplify tests to remove unnecessary mocking and focus on core functionality
+- Make 'print' and 'write_netrc' options mutually exclusive for CLI
 - Username and OTP are no longer masked inputs
+
+# removed
+
+- test_exceptions
 
 ## [1.1.0] - 20-01-2026
 
