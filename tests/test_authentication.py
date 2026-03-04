@@ -8,6 +8,7 @@ import pytest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import stat
+import json
 from unittest.mock import MagicMock
 import requests
 
@@ -95,6 +96,67 @@ class TestAuthenticationServiceNetrc:
 
         with pytest.raises(AuthenticationError, match="no host configured"):
             auth_service._write_netrc("test_token")
+
+    def test_write_polytopeapirc_creates_file(self):
+        """Test writing Polytope token file creates expected JSON payload."""
+        config = BaseConfig(iam_client="polytope-api-public")
+
+        with TemporaryDirectory() as tmpdir:
+            outpath = Path(tmpdir) / ".polytopeapirc"
+            auth_service = AuthenticationService(config=config)
+
+            auth_service._write_polytopeapirc("refresh_token_123", outpath=outpath)
+
+            assert outpath.exists()
+            payload = json.loads(outpath.read_text())
+            assert payload == {"user_key": "refresh_token_123"}
+
+            mode = outpath.stat().st_mode
+            assert mode & stat.S_IRUSR
+            assert mode & stat.S_IWUSR
+
+    def test_get_polytope_client_id_reads_yaml_value(self):
+        """Test Polytope client ID is sourced from config YAML."""
+        auth_service = AuthenticationService(config=BaseConfig())
+        assert auth_service._get_polytope_client_id() == "polytope-api-public"
+
+    def test_login_writes_polytopeapirc_by_default(self, monkeypatch):
+        """Test that Polytope login writes refresh token file by default."""
+        config = BaseConfig(
+            iam_client="polytope-api-public",
+            iam_redirect_uri="https://polytope.example/callback",
+        )
+        with TemporaryDirectory() as tmpdir:
+            monkeypatch.setattr(Path, "home", lambda: Path(tmpdir))
+
+            auth_service = AuthenticationService(config=config)
+
+            auth_service._get_credentials = MagicMock(return_value=("user", "pass"))
+            auth_service._get_auth_url_action = MagicMock(return_value="https://auth.example/login")
+
+            login_response = MagicMock()
+            login_response.status_code = 302
+            login_response.headers = {"Location": "https://polytope.example/callback?code=abc123"}
+            auth_service._perform_login = MagicMock(return_value=login_response)
+
+            auth_service._exchange_code_for_token = MagicMock(
+                return_value={"access_token": "access_123", "refresh_token": "refresh_123"}
+            )
+            auth_service._verify_and_decode = MagicMock(return_value={"sub": "user"})
+
+            result = auth_service.login(write_netrc=False)
+
+            outpath = Path(tmpdir) / ".polytopeapirc"
+            assert outpath.exists()
+            payload = json.loads(outpath.read_text())
+            assert payload == {"user_key": "refresh_123"}
+
+            mode = outpath.stat().st_mode
+            assert mode & stat.S_IRUSR
+            assert mode & stat.S_IWUSR
+
+            assert result.access_token == "access_123"
+            assert result.refresh_token == "refresh_123"
 
 
 class TestAuthenticationOTPFlow:

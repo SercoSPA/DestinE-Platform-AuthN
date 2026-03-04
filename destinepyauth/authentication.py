@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 import base64
 import requests
+import yaml
 from lxml import html
 from lxml.etree import ParserError
 
@@ -255,6 +256,25 @@ class AuthenticationService:
 
         logger.info(f"Updated .netrc entry for {self.netrc_host}")
 
+    def _write_polytopeapirc(self, token: str, outpath: Optional[Path] = None) -> None:
+        """Write Polytope refresh token to ~/.polytopeapirc."""
+        outpath = outpath or Path.home() / ".polytopeapirc"
+        outpath.write_text(json.dumps({"user_key": token}) + "\n")
+        outpath.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 600 permissions
+        logger.info(f"Updated Polytope token file at {outpath}")
+
+    def _get_polytope_client_id(self) -> Optional[str]:
+        """Read the Polytope iam_client value from its YAML config."""
+        config_path = Path(__file__).parent / "configs" / "polytope.yaml"
+        try:
+            data = yaml.safe_load(config_path.read_text()) or {}
+            value = data.get("iam_client")
+            if isinstance(value, str):
+                return value.strip() or None
+        except Exception as e:
+            logger.debug(f"Could not read Polytope client ID from {config_path}: {e}")
+        return None
+
     def _verify_and_decode(self, token: str, leeway: int = 30) -> Optional[Dict[str, Any]]:
         """
         Verify the token signature and decode the payload.
@@ -425,6 +445,13 @@ class AuthenticationService:
 
         # Verify and decode using access token (if available)
         self.decoded_token = self._verify_and_decode(access_token)
+
+        # Polytope compatibility: write refresh token to ~/.polytopeapirc by default
+        polytope_client_id = self._get_polytope_client_id()
+        if polytope_client_id and self.config.iam_client == polytope_client_id:
+            if not refresh_token:
+                raise AuthenticationError("No refresh token available for Polytope token file")
+            self._write_polytopeapirc(refresh_token)
 
         if write_netrc:
             # Write refresh token to .netrc
