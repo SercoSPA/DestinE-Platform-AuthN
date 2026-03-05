@@ -6,7 +6,7 @@ Tests core behavior: return values, logging, and error propagation.
 
 import logging
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, ANY
 
 from destinepyauth.get_token import get_token
 from destinepyauth.authentication import TokenResult
@@ -30,6 +30,7 @@ class TestGetToken:
 
                 assert result is mock_result
                 assert result.access_token == "test_token_123"
+                mock_auth_class.assert_called_once_with(config=ANY, service_name="highway")
 
     def test_get_token_returns_none_when_writing_netrc(self):
         """Test that get_token returns None when write_netrc=True to avoid token exposure."""
@@ -42,6 +43,7 @@ class TestGetToken:
                 result = get_token("highway", write_netrc=True)
 
                 assert result is None
+                mock_auth_class.assert_called_once_with(config=ANY, service_name="highway")
 
     def test_get_token_configures_logging_level(self):
         """Test that get_token sets library logger level based on verbose flag."""

@@ -115,11 +115,6 @@ class TestAuthenticationServiceNetrc:
             assert mode & stat.S_IRUSR
             assert mode & stat.S_IWUSR
 
-    def test_get_polytope_client_id_reads_yaml_value(self):
-        """Test Polytope client ID is sourced from config YAML."""
-        auth_service = AuthenticationService(config=BaseConfig())
-        assert auth_service._get_polytope_client_id() == "polytope-api-public"
-
     def test_login_writes_polytopeapirc_by_default(self, monkeypatch):
         """Test that Polytope login writes refresh token file by default."""
         config = BaseConfig(
@@ -129,7 +124,7 @@ class TestAuthenticationServiceNetrc:
         with TemporaryDirectory() as tmpdir:
             monkeypatch.setattr(Path, "home", lambda: Path(tmpdir))
 
-            auth_service = AuthenticationService(config=config)
+            auth_service = AuthenticationService(config=config, service_name="polytope")
 
             auth_service._get_credentials = MagicMock(return_value=("user", "pass"))
             auth_service._get_auth_url_action = MagicMock(return_value="https://auth.example/login")

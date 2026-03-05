@@ -11,7 +11,6 @@ from dataclasses import dataclass
 
 import base64
 import requests
-import yaml
 from lxml import html
 from lxml.etree import ParserError
 
@@ -46,6 +45,7 @@ class AuthenticationService:
     def __init__(
         self,
         config: BaseConfig,
+        service_name: Optional[str] = None,
         netrc_host: Optional[str] = None,
     ) -> None:
         """
@@ -53,9 +53,11 @@ class AuthenticationService:
 
         Args:
             config: Configuration containing IAM URL, realm, client, credentials, scope, and exchange_config.
+            service_name: Name of the target service.
             netrc_host: Hostname for .netrc entry. If None, extracted from redirect_uri.
         """
         self.config = config
+        self.service_name = service_name
         self.scope = config.scope
         self.exchange_config = config.exchange_config
         self.decoded_token: Optional[Dict[str, Any]] = None
@@ -69,6 +71,7 @@ class AuthenticationService:
         logger.debug(f"  IAM URL: {self.config.iam_url}")
         logger.debug(f"  IAM Realm: {self.config.iam_realm}")
         logger.debug(f"  IAM Client: {self.config.iam_client}")
+        logger.debug(f"  Service Name: {self.service_name}")
         logger.debug(f"  Redirect URI: {self.config.iam_redirect_uri}")
         logger.debug(f"  Scope: {self.scope}")
         logger.debug(f"  Netrc Host: {self.netrc_host}")
@@ -263,18 +266,6 @@ class AuthenticationService:
         outpath.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 600 permissions
         logger.info(f"Updated Polytope token file at {outpath}")
 
-    def _get_polytope_client_id(self) -> Optional[str]:
-        """Read the Polytope iam_client value from its YAML config."""
-        config_path = Path(__file__).parent / "configs" / "polytope.yaml"
-        try:
-            data = yaml.safe_load(config_path.read_text()) or {}
-            value = data.get("iam_client")
-            if isinstance(value, str):
-                return value.strip() or None
-        except Exception as e:
-            logger.debug(f"Could not read Polytope client ID from {config_path}: {e}")
-        return None
-
     def _verify_and_decode(self, token: str, leeway: int = 30) -> Optional[Dict[str, Any]]:
         """
         Verify the token signature and decode the payload.
@@ -447,8 +438,7 @@ class AuthenticationService:
         self.decoded_token = self._verify_and_decode(access_token)
 
         # Polytope compatibility: write refresh token to ~/.polytopeapirc by default
-        polytope_client_id = self._get_polytope_client_id()
-        if polytope_client_id and self.config.iam_client == polytope_client_id:
+        if self.service_name == "polytope":
             if not refresh_token:
                 raise AuthenticationError("No refresh token available for Polytope token file")
             self._write_polytopeapirc(refresh_token)
