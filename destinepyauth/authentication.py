@@ -45,6 +45,7 @@ class AuthenticationService:
     def __init__(
         self,
         config: BaseConfig,
+        service_name: Optional[str] = None,
         netrc_host: Optional[str] = None,
     ) -> None:
         """
@@ -52,9 +53,11 @@ class AuthenticationService:
 
         Args:
             config: Configuration containing IAM URL, realm, client, credentials, scope, and exchange_config.
+            service_name: Name of the target service.
             netrc_host: Hostname for .netrc entry. If None, extracted from redirect_uri.
         """
         self.config = config
+        self.service_name = service_name
         self.scope = config.scope
         self.exchange_config = config.exchange_config
         self.decoded_token: Optional[Dict[str, Any]] = None
@@ -68,6 +71,7 @@ class AuthenticationService:
         logger.debug(f"  IAM URL: {self.config.iam_url}")
         logger.debug(f"  IAM Realm: {self.config.iam_realm}")
         logger.debug(f"  IAM Client: {self.config.iam_client}")
+        logger.debug(f"  Service Name: {self.service_name}")
         logger.debug(f"  Redirect URI: {self.config.iam_redirect_uri}")
         logger.debug(f"  Scope: {self.scope}")
         logger.debug(f"  Netrc Host: {self.netrc_host}")
@@ -255,6 +259,13 @@ class AuthenticationService:
 
         logger.info(f"Updated .netrc entry for {self.netrc_host}")
 
+    def _write_polytopeapirc(self, token: str, outpath: Optional[Path] = None) -> None:
+        """Write Polytope refresh token to ~/.polytopeapirc."""
+        outpath = outpath or Path.home() / ".polytopeapirc"
+        outpath.write_text(json.dumps({"user_key": token}) + "\n")
+        outpath.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 600 permissions
+        logger.info(f"Updated Polytope token file at {outpath}")
+
     def _verify_and_decode(self, token: str, leeway: int = 30) -> Optional[Dict[str, Any]]:
         """
         Verify the token signature and decode the payload.
@@ -425,6 +436,12 @@ class AuthenticationService:
 
         # Verify and decode using access token (if available)
         self.decoded_token = self._verify_and_decode(access_token)
+
+        # Polytope compatibility: write refresh token to ~/.polytopeapirc by default
+        if self.service_name == "polytope":
+            if not refresh_token:
+                raise AuthenticationError("No refresh token available for Polytope token file")
+            self._write_polytopeapirc(refresh_token)
 
         if write_netrc:
             # Write refresh token to .netrc

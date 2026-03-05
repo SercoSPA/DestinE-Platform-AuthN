@@ -41,7 +41,7 @@ def get_token(
     config = ConfigurationFactory.load_config(service)
 
     # Create and run authentication
-    auth_service = AuthenticationService(config=config)
+    auth_service = AuthenticationService(config=config, service_name=service)
 
     result = auth_service.login(write_netrc=write_netrc)
 
