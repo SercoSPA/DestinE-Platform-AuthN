@@ -59,6 +59,12 @@ ds = xr.open_dataset(
 )
 ```
 
+### Polytope compatibility (`~/.polytopeapirc`)
+
+When authenticating with `get_token("polytope")`, the library automatically writes the
+refresh token to `~/.polytopeapirc` as JSON (`{"user_key": "..."}`), matching the
+expected Polytope client format.
+
 ## Available Services
 
 - `cacheb` - CacheB data service

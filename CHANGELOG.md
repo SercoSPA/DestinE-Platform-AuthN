@@ -14,7 +14,6 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 - Automatically write to ~/.polytopeapirc when authenticating with Polytope
 
-
 ## [1.1.1] - 04-03-2026
 
 # added
