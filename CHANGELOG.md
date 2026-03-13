@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fixed" and "Security".
 
+## pre-release
+
+# fixed
+
+- correct version number exposed with the '__version__' attribute of the package
+
 ## [1.2.0] - 05-03-2026
 
 # added

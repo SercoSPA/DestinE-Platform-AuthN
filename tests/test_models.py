@@ -4,8 +4,11 @@ Unit tests for data models and configuration.
 Tests TokenResult, BaseConfig, and configuration-related functionality.
 """
 
+from importlib.metadata import PackageNotFoundError, version
+
 from destinepyauth.configs import BaseConfig
 from destinepyauth.authentication import TokenResult
+import destinepyauth
 
 
 class TestTokenResult:
@@ -58,3 +61,17 @@ class TestBaseConfig:
         assert config.password == "testpass"
         assert config.iam_url == "https://custom.auth.com"
         assert config.iam_realm == "desp"  # default unchanged
+
+
+def test_package_version_exposed():
+    """Test package exposes a __version__ attribute."""
+    assert hasattr(destinepyauth, "__version__")
+    assert isinstance(destinepyauth.__version__, str)
+    assert destinepyauth.__version__
+
+    try:
+        expected = version("destinepyauth")
+    except PackageNotFoundError:
+        expected = "0+unknown"
+
+    assert destinepyauth.__version__ == expected
