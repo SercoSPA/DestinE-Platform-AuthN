@@ -8,37 +8,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fixed" and "Security".
 
-## pre-release
+# [1.2.1] - 18-03-2026
 
-# fixed
+## fixed
 
 - correct version number exposed with the '__version__' attribute of the package
 
-## [1.2.0] - 05-03-2026
+# [1.2.0] - 05-03-2026
 
-# added
+## added
 
 - Automatically write to ~/.polytopeapirc when authenticating with Polytope
 
-## [1.1.1] - 04-03-2026
+# [1.1.1] - 04-03-2026
 
-# added
+## added
 
 - OTP testing and config precendence
 - test_cli.py and test_get_token.py to cover core API and CLI functionality
 - test_token_ops to test token exchange and JWT verification
 
-# changed
+## changed
 
 - Simplify tests to remove unnecessary mocking and focus on core functionality
 - Make 'print' and 'write_netrc' options mutually exclusive for CLI
 - Username and OTP are no longer masked inputs
 
-# removed
+## removed
 
 - test_exceptions
 
-## [1.1.0] - 20-01-2026
+# [1.1.0] - 20-01-2026
 
 ## added
 
@@ -57,37 +57,37 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 - add small leeway (30s) for token verification to avoid errors about token being issued in the future
 
-## [1.0.0] - 05-01-2026
+# [1.0.0] - 05-01-2026
 
 ## added
 
 - 2FA support: users will be prompted to enter OTP if 2FA is enabled
 - instructions for adding a new service
 
-## [0.2.3] - 12-12-2025
+# [0.2.3] - 12-12-2025
 
-# security
+## security
 
 - avoid accidentally printing token when write_netrc=True or using CLI
 
-## [0.2.2] - 11-12-2025
+# [0.2.2] - 11-12-2025
 
-# added
+## added
 
 - automatic version update and github release with git tagging
 
-## [0.2.1] - 10-12-2025
+# [0.2.1] - 10-12-2025
 
-# added
+## added
 
 - CD to publish to PyPI
 
-# changed
+## changed
 
 - changed repository visibility to public
 - remove unnecessary dependencies and classifiers from pyproject.toml
 
-## [0.2.0] - 10-12-2025
+# [0.2.0] - 10-12-2025
 
 ## added
 
@@ -103,7 +103,7 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 - API parameters username, password
 
-## [0.1.0] - 10-12-2025
+# [0.1.0] - 10-12-2025
 
 ### added
 
