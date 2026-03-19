@@ -16,8 +16,8 @@ from destinepyauth.exceptions import AuthenticationError
 class TestCLIBasics:
     """Core CLI functionality tests."""
 
-    def test_cli_requires_service_argument(self):
-        """Test that CLI fails when --SERVICE is not provided."""
+    def test_cli_requires_service_or_config_argument(self):
+        """Test that CLI fails when neither --SERVICE nor --config is provided."""
         with patch.object(sys, "argv", ["destinepyauth"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -43,7 +43,24 @@ class TestCLIBasics:
         with patch.object(sys, "argv", ["destinepyauth", "-s", "eden", "-v", "-n"]):
             with patch("destinepyauth.cli.get_token", return_value=None) as mock_get_token:
                 main()
-                mock_get_token.assert_called_once_with("eden", write_netrc=True, verbose=True)
+                mock_get_token.assert_called_once_with(
+                    service="eden", config_path=None, write_netrc=True, verbose=True
+                )
+
+    def test_cli_accepts_custom_config_without_service(self):
+        """Test that CLI can authenticate with only --config."""
+        config_path = "/tmp/my-custom-service.yaml"
+        mock_result = TokenResult(access_token="token")
+
+        with patch.object(sys, "argv", ["destinepyauth", "-c", config_path]):
+            with patch("destinepyauth.cli.get_token", return_value=mock_result) as mock_get_token:
+                main()
+                mock_get_token.assert_called_once_with(
+                    service="my-custom-service",
+                    config_path=config_path,
+                    write_netrc=False,
+                    verbose=False,
+                )
 
 
 class TestCLIPrintOutput:

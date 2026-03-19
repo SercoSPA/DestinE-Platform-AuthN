@@ -22,6 +22,18 @@ result = get_token("highway")
 token = result.access_token
 ```
 
+### Using a custom service config file
+
+You can authenticate against a custom service by passing
+the path to a YAML config file:
+
+```python
+from destinepyauth import get_token
+
+result = get_token(config_path="/path/to/myservice.yaml")
+token = result.access_token
+```
+
 ### Using with requests
 
 ```python
@@ -65,43 +77,26 @@ When authenticating with `get_token("polytope")`, the library automatically writ
 refresh token to `~/.polytopeapirc` as JSON (`{"user_key": "..."}`), matching the
 expected Polytope client format.
 
+## CLI Usage
+
+```bash
+# Built-in service
+destinepyauth -s highway --print
+
+# Custom service config file
+destinepyauth -c path/to/myservice.yaml --print
+```
+
 ## Available Services
 
 - `cacheb` - CacheB data service
 - `dea` - DEA service
 - `eden` - Eden broker
-- `hda` - Harmonized Data Access (includes token exchange)
-- `highway` - Highway service (includes token exchange)
+- `hda` - Harmonized Data Access
+- `highway` - Highway service
 - `insula` - Insula service
 - `polytope` - Data access service
 - `streamer` - Streaming service
-
-## Configuration
-
-Service configurations are stored in YAML files in the `destinepyauth/configs/` directory. Each service has its own configuration file (e.g., `highway.yaml`, `cacheb.yaml`) that defines default values for authentication parameters.
-
-### Configuration Priority
-
-The library uses [Conflator](https://github.com/ecmwf/conflator) to merge configurations from multiple sources, with the following priority (highest to lowest):
-
-1. **Command-line arguments** (e.g., `--iam-client my-client`)
-2. **Environment variables** (e.g., `DESPAUTH_IAM_CLIENT=my-client`)
-3. **User config files** (e.g., `~/.despauth.yaml`)
-4. **Service defaults** (from `destinepyauth/configs/{service}.yaml`)
-
-This allows you to override any service default without modifying the package.
-
-### Example: Override IAM Client
-
-```bash
-# Via environment variable
-export DESPAUTH_IAM_CLIENT=my-custom-client
-python -c "from destinepyauth import get_token; get_token('highway')"
-
-# Via user config file
-echo "iam_client: my-custom-client" > ~/.despauth.yaml
-python -c "from destinepyauth import get_token; get_token('highway')"
-```
 
 ## Credential Handling
 
@@ -118,11 +113,39 @@ result = get_token("highway")
 This ensures the password cannot be accidentally exposed in terminal logs, screen recordings,
 or shell history.
 
+You can also provide credentials via environment variables to avoid interactive prompts:
+
+```bash
+export DESPAUTH_USER='<your-username>'
+export DESPAUTH_PASSWORD='<your-password>'
+```
+
+When `DESPAUTH_USER` and `DESPAUTH_PASSWORD` are set, `get_token()` uses them directly.
+
 ### Two Factor Authentication
 
 If you have 2FA enabled, you will also be prompted to enter an OTP from your authenticator app.
 
 You can enable/disable 2FA in your [DestinE platform account settings](https://auth.destine.eu/realms/desp/account/).
+
+## Configuration
+
+Service configurations are stored in YAML files in the `destinepyauth/configs/` directory. Each service has its own configuration file (e.g., `highway.yaml`, `cacheb.yaml`) that defines default values for authentication parameters.
+
+### Configuration Priority
+
+The library uses [Conflator](https://github.com/ecmwf/conflator) to merge configuration values.
+
+The base configuration file is:
+
+- Built-in service YAML (`destinepyauth/configs/{service}.yaml`) when using `get_token("service")` or `destinepyauth -s service`
+- Your custom YAML when using `get_token(config_path=...)` or `destinepyauth -c ...`
+
+Environment variables (`DESPAUTH_*`) override values from that base config file.
+
+If both a service and a custom config path are provided (for example, `destinepyauth -s hda -c config.yaml`),
+the custom config file is used as the base configuration. In that case, `-s/--SERVICE` is used only as the
+service label in output/logging, not as a source of default config values.
 
 ## Adding a new service
 
@@ -143,6 +166,10 @@ exchange_config:
 ```
 
 The service will be automatically discovered and available via `get_token("myservice")`.
+
+If you do not want to modify the installed package, you can keep this YAML anywhere
+on your filesystem and call `get_token(config_path="/path/to/myservice.yaml")`
+or `destinepyauth -c /path/to/myservice.yaml`.
 
 ### Service Configuration Fields
 

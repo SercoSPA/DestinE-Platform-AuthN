@@ -1,6 +1,7 @@
 """Service registry and configuration factory."""
 
 from pathlib import Path
+from typing import Optional
 
 from conflator import Conflator
 
@@ -66,28 +67,36 @@ class ConfigurationFactory:
     """Factory for loading service configurations using Conflator."""
 
     @staticmethod
-    def load_config(service_name: str) -> BaseConfig:
+    def load_config(service_name: str, config_path: Optional[str] = None) -> BaseConfig:
         """
         Load configuration for a service.
 
-        Loads the service's default configuration from YAML using Conflator,
-        which automatically merges with user overrides from environment variables,
-        CLI args, and user config files.
+        Loads configuration from either a built-in service YAML file or an explicit
+        custom YAML file path, then applies environment/CLI overrides handled by
+        Conflator.
 
         Args:
             service_name: Name of the service to configure.
+            config_path: Optional path to a custom service YAML config.
+                If provided, this config is used instead of built-in service defaults.
 
         Returns:
             BaseConfig with all service-specific settings including scope and exchange_config.
 
         Raises:
-            ValueError: If the service is unknown.
+            ValueError: If the service is unknown (when config_path is not provided)
+                or if config_path does not exist.
         """
-        # Get the service config file path
-        config_path = ServiceRegistry.get_service_config_path(service_name)
+        if config_path is not None:
+            resolved_config_path = Path(config_path).expanduser().resolve()
+            if not resolved_config_path.exists():
+                raise ValueError(f"Config file does not exist: {resolved_config_path}")
+        else:
+            resolved_config_path = ServiceRegistry.get_service_config_path(service_name)
 
         # Load config using Conflator with the service YAML as the config file
-        # Conflator will merge: service YAML → user config files → env vars → CLI args
-        config = Conflator("despauth", BaseConfig, config_file=config_path).load()
+        # Conflator uses the selected YAML file as base config and then applies
+        # environment/CLI overrides.
+        config = Conflator("despauth", BaseConfig, config_file=resolved_config_path).load()
 
         return config
