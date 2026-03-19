@@ -116,7 +116,7 @@ or shell history.
 You can also provide credentials via environment variables to avoid interactive prompts:
 
 ```bash
-export DESPAUTH_USER=myuser
+export DESPAUTH_USER='<your-username>'
 export DESPAUTH_PASSWORD='<your-password>'
 ```
 
@@ -168,7 +168,7 @@ exchange_config:
 The service will be automatically discovered and available via `get_token("myservice")`.
 
 If you do not want to modify the installed package, you can keep this YAML anywhere
-on your filesystem and call `get_token("myservice", config_path="/path/to/myservice.yaml")`
+on your filesystem and call `get_token(config_path="/path/to/myservice.yaml")`
 or `destinepyauth -c /path/to/myservice.yaml`.
 
 ### Service Configuration Fields
