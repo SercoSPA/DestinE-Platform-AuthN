@@ -20,7 +20,7 @@ class TestGetToken:
         """Test that get_token returns TokenResult when write_netrc=False."""
         mock_result = TokenResult(access_token="test_token_123")
 
-        with patch("destinepyauth.get_token.ConfigurationFactory.load_config"):
+        with patch("destinepyauth.get_token.ConfigurationFactory.load_config") as mock_load_config:
             with patch("destinepyauth.get_token.AuthenticationService") as mock_auth_class:
                 mock_auth = MagicMock()
                 mock_auth.login.return_value = mock_result
@@ -31,6 +31,7 @@ class TestGetToken:
                 assert result is mock_result
                 assert result.access_token == "test_token_123"
                 mock_auth_class.assert_called_once_with(config=ANY, service_name="highway")
+                mock_load_config.assert_called_once_with("highway", config_path=None)
 
     def test_get_token_returns_none_when_writing_netrc(self):
         """Test that get_token returns None when write_netrc=True to avoid token exposure."""
@@ -72,3 +73,37 @@ class TestGetToken:
 
                 with pytest.raises(AuthenticationError, match="Login failed"):
                     get_token("highway")
+
+    def test_get_token_passes_custom_config_path(self):
+        """Test that get_token forwards custom config path to ConfigurationFactory."""
+        config_path = "/tmp/custom_service.yaml"
+
+        with patch("destinepyauth.get_token.ConfigurationFactory.load_config") as mock_load_config:
+            with patch("destinepyauth.get_token.AuthenticationService") as mock_auth_class:
+                mock_auth = MagicMock()
+                mock_auth.login.return_value = TokenResult(access_token="token")
+                mock_auth_class.return_value = mock_auth
+
+                get_token(service="custom-service", config_path=config_path)
+
+                mock_load_config.assert_called_once_with("custom-service", config_path=config_path)
+
+    def test_get_token_allows_config_path_without_service(self):
+        """Test that service can be inferred from config file name when omitted."""
+        config_path = "/tmp/myservice.yaml"
+
+        with patch("destinepyauth.get_token.ConfigurationFactory.load_config") as mock_load_config:
+            with patch("destinepyauth.get_token.AuthenticationService") as mock_auth_class:
+                mock_auth = MagicMock()
+                mock_auth.login.return_value = TokenResult(access_token="token")
+                mock_auth_class.return_value = mock_auth
+
+                get_token(config_path=config_path)
+
+                mock_load_config.assert_called_once_with("myservice", config_path=config_path)
+                mock_auth_class.assert_called_once_with(config=ANY, service_name="myservice")
+
+    def test_get_token_requires_service_or_config_path(self):
+        """Test that get_token raises when neither service nor config_path are provided."""
+        with pytest.raises(ValueError, match="Either service or config_path must be provided"):
+            get_token()
