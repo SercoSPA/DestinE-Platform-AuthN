@@ -18,7 +18,6 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 - clarify configuration parameter priority between cli, environment variables and configuration files
 
-
 # [1.2.1] - 18-03-2026
 
 ## fixed
