@@ -5,6 +5,7 @@ Tests ServiceRegistry and ConfigurationFactory functionality.
 """
 
 import pytest
+from pathlib import Path
 
 from destinepyauth.configs import BaseExchangeConfig
 from destinepyauth.services import ServiceRegistry, ConfigurationFactory
@@ -87,3 +88,27 @@ class TestConfigurationFactory:
                 parsed = urlparse(redirect_uri)
                 assert redirect_uri.startswith("https://"), f"{service} has non-HTTPS redirect URI"
                 assert parsed.netloc, f"{service} redirect URI has no hostname"
+
+    def test_load_config_from_custom_path(self, tmp_path: Path):
+        """Test loading configuration from a user-provided YAML file path."""
+        custom_config = tmp_path / "myservice.yaml"
+        custom_config.write_text(
+            """
+scope: openid offline_access
+iam_client: custom-public
+iam_redirect_uri: https://custom.example.com/
+""".strip()
+        )
+
+        config = ConfigurationFactory.load_config("myservice", config_path=str(custom_config))
+
+        assert config.scope == "openid offline_access"
+        assert config.iam_client == "custom-public"
+        assert config.iam_redirect_uri == "https://custom.example.com/"
+
+    def test_load_config_from_custom_path_missing_file_raises(self, tmp_path: Path):
+        """Test missing custom config path raises ValueError."""
+        missing = tmp_path / "missing.yaml"
+
+        with pytest.raises(ValueError, match="Config file does not exist"):
+            ConfigurationFactory.load_config("myservice", config_path=str(missing))
