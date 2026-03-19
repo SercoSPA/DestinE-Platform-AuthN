@@ -4,6 +4,7 @@
 import sys
 import argparse
 import logging
+from pathlib import Path
 
 from destinepyauth.services import ServiceRegistry
 from destinepyauth.exceptions import AuthenticationError
@@ -26,10 +27,16 @@ def main() -> None:
     parser.add_argument(
         "--SERVICE",
         "-s",
-        required=True,
+        required=False,
         type=str,
-        choices=ServiceRegistry.list_services(),
-        help="Service name to authenticate against",
+        help="Service name to authenticate against (optional with --config)",
+    )
+
+    parser.add_argument(
+        "--config",
+        "-c",
+        type=str,
+        help="Path to custom YAML service config (optional)",
     )
 
     parser.add_argument(
@@ -56,8 +63,26 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    if not args.SERVICE and not args.config:
+        parser.error("Either --SERVICE/-s or --config/-c must be provided")
+
+    if args.SERVICE and not args.config and args.SERVICE not in ServiceRegistry.list_services():
+        parser.error(
+            f"Unknown service '{args.SERVICE}'. Available: {', '.join(ServiceRegistry.list_services())}"
+        )
+
+    service_name = args.SERVICE
+    if service_name is None:
+        # Derive a stable service label from the custom config filename.
+        service_name = Path(args.config).stem
+
     try:
-        result = get_token(args.SERVICE, write_netrc=args.netrc, verbose=args.verbose)
+        result = get_token(
+            service=service_name,
+            config_path=args.config,
+            write_netrc=args.netrc,
+            verbose=args.verbose,
+        )
         # Output the token
         if args.print:
             print(result.access_token)
