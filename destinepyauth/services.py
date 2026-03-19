@@ -71,9 +71,9 @@ class ConfigurationFactory:
         """
         Load configuration for a service.
 
-        Loads the service's default configuration from YAML using Conflator,
-        which automatically merges with user overrides from environment variables,
-        CLI args, and user config files.
+        Loads configuration from either a built-in service YAML file or an explicit
+        custom YAML file path, then applies environment/CLI overrides handled by
+        Conflator.
 
         Args:
             service_name: Name of the service to configure.
@@ -95,7 +95,8 @@ class ConfigurationFactory:
             resolved_config_path = ServiceRegistry.get_service_config_path(service_name)
 
         # Load config using Conflator with the service YAML as the config file
-        # Conflator will merge: service YAML → user config files → env vars → CLI args
+        # Conflator uses the selected YAML file as base config and then applies
+        # environment/CLI overrides.
         config = Conflator("despauth", BaseConfig, config_file=resolved_config_path).load()
 
         return config
