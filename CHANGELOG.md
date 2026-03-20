@@ -16,6 +16,7 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 ## fixed
 
+- SERVICE option in CLI is now lowercase
 - clarify configuration parameter priority between cli, environment variables and configuration files
 
 # [1.2.1] - 18-03-2026

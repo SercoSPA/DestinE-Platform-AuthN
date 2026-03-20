@@ -10,29 +10,32 @@ pip install destinepyauth
 
 ## Usage
 
-The main entry point is the `get_token()` function:
+The main entry point is the `get_token()` function.
 
+For example, obtain an access token for the `highway` service:
 ```python
 from destinepyauth import get_token
 
 # Authenticate (prompts for credentials if not in environment)
 result = get_token("highway")
 
-# Access the token
-token = result.access_token
+# Access the tokens
+access_token = result.access_token
+refresh_token = result.refresh_token
 ```
 
-### Using a custom service config file
+### Available Services
 
-You can authenticate against a custom service by passing
-the path to a YAML config file:
+- `cacheb` - CacheB data service
+- `dea` - DEA service
+- `eden` - EDEN broker
+- `hda` - Harmonized Data Access
+- `highway` - Highway service
+- `insula` - Insula service
+- `polytope` - Data access service
+- `streamer` - DestinEStreamer
 
-```python
-from destinepyauth import get_token
-
-result = get_token(config_path="/path/to/myservice.yaml")
-token = result.access_token
-```
+Please see [below instructions for using a custom service](#custom-services).
 
 ### Using with requests
 
@@ -47,7 +50,7 @@ response = requests.get("https://api.example.com/data", headers=headers)
 
 ### Using with zarr/xarray (netrc support)
 
-For services like CacheB that work with zarr, you can write credentials to `~/.netrc`:
+For services like CacheB that work with zarr, you can write a refresh token to `~/.netrc`:
 
 ```python
 from destinepyauth import get_token
@@ -77,7 +80,51 @@ When authenticating with `get_token("polytope")`, the library automatically writ
 refresh token to `~/.polytopeapirc` as JSON (`{"user_key": "..."}`), matching the
 expected Polytope client format.
 
-## CLI Usage
+### Custom services
+
+You can authenticate against a custom service by passing
+the path to a YAML config file:
+
+```python
+from destinepyauth import get_token
+
+result = get_token(config_path="/path/to/myservice.yaml")
+token = result.access_token
+```
+
+where the config file should be in the following format:
+```yaml
+# Example: myservice.yaml
+scope: openid offline_access
+iam_client: myservice-public
+iam_redirect_uri: https://myservice.destine.eu/
+
+# Optional: Token exchange configuration (only if needed)
+exchange_config:
+  token_url: https://identity.example.com/token
+  audience: myservice-public
+  subject_issuer: desp-oidc
+  client_id: myservice-public
+```
+
+#### Service Configuration Fields
+
+- **`scope`**: OAuth2 scopes (e.g., `"openid"`, `"openid offline_access"`)
+- **`iam_client`**: Client ID registered with the IAM (Identity and Access Management)
+- **`iam_redirect_uri`**: OAuth redirect URI for the service
+- **`iam_url`** (optional): IAM server URL (defaults to `https://auth.destine.eu`)
+- **`iam_realm`** (optional): IAM realm (defaults to `desp`)
+
+Some services (like Highway and HDA) require token exchange because they validate tokens against a different issuer than the initial login. For these services, an `exchange_config` section is necessary:
+
+- **`token_url`**: Token exchange endpoint
+- **`audience`**: Target audience for the exchanged token
+- **`subject_issuer`**: Subject issuer identifier
+- **`client_id`**: Client ID for the exchange request
+
+The library automatically handles token exchange using [RFC 8693](https://datatracker.ietf.org/doc/html/rfc8693) when `exchange_config` is present.
+
+### CLI Usage
 
 ```bash
 # Built-in service
@@ -86,17 +133,6 @@ destinepyauth -s highway --print
 # Custom service config file
 destinepyauth -c path/to/myservice.yaml --print
 ```
-
-## Available Services
-
-- `cacheb` - CacheB data service
-- `dea` - DEA service
-- `eden` - Eden broker
-- `hda` - Harmonized Data Access
-- `highway` - Highway service
-- `insula` - Insula service
-- `polytope` - Data access service
-- `streamer` - Streaming service
 
 ## Credential Handling
 
@@ -126,7 +162,7 @@ When `DESPAUTH_USER` and `DESPAUTH_PASSWORD` are set, `get_token()` uses them di
 
 If you have 2FA enabled, you will also be prompted to enter an OTP from your authenticator app.
 
-You can enable/disable 2FA in your [DestinE platform account settings](https://auth.destine.eu/realms/desp/account/).
+You can enable/disable 2FA in your [DESP account settings](https://auth.destine.eu/realms/desp/account/).
 
 ## Configuration
 
@@ -144,48 +180,11 @@ The base configuration file is:
 Environment variables (`DESPAUTH_*`) override values from that base config file.
 
 If both a service and a custom config path are provided (for example, `destinepyauth -s hda -c config.yaml`),
-the custom config file is used as the base configuration. In that case, `-s/--SERVICE` is used only as the
-service label in output/logging, not as a source of default config values.
+the custom config file is used as the base configuration.
 
 ## Adding a new service
 
-To integrate a new DestinE service, create a YAML configuration file in `destinepyauth/configs/{service_name}.yaml`:
+To integrate a new DestinE service, either:
+* Fork the repository, add a new configuration file to `destinepyauth/configs/{service_name}.yaml`, and then open a pull request
+* OR open an issue with a request to integrate a new service
 
-```yaml
-# Example: myservice.yaml
-scope: openid offline_access
-iam_client: myservice-public
-iam_redirect_uri: https://myservice.destine.eu/
-
-# Optional: Token exchange configuration (only if needed)
-exchange_config:
-  token_url: https://identity.example.com/token
-  audience: myservice-public
-  subject_issuer: desp-oidc
-  client_id: myservice-public
-```
-
-The service will be automatically discovered and available via `get_token("myservice")`.
-
-If you do not want to modify the installed package, you can keep this YAML anywhere
-on your filesystem and call `get_token(config_path="/path/to/myservice.yaml")`
-or `destinepyauth -c /path/to/myservice.yaml`.
-
-### Service Configuration Fields
-
-- **`scope`**: OAuth2 scopes (e.g., `"openid"`, `"openid offline_access"`)
-- **`iam_client`**: Client ID registered with the IAM
-- **`iam_redirect_uri`**: OAuth redirect URI for the service
-- **`iam_url`** (optional): IAM server URL (defaults to `https://auth.destine.eu`)
-- **`iam_realm`** (optional): IAM realm (defaults to `desp`)
-
-### Token Exchange
-
-Some services (like Highway and HDA) require token exchange because they validate tokens against a different issuer than the initial login. For these services, add an `exchange_config` section:
-
-- **`token_url`**: Token exchange endpoint
-- **`audience`**: Target audience for the exchanged token
-- **`subject_issuer`**: Subject issuer identifier
-- **`client_id`**: Client ID for the exchange request
-
-The library automatically handles token exchange using [RFC 8693](https://datatracker.ietf.org/doc/html/rfc8693) when `exchange_config` is present.

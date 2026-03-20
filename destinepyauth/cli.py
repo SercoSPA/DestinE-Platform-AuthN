@@ -25,7 +25,7 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "--SERVICE",
+        "--service",
         "-s",
         required=False,
         type=str,
@@ -63,15 +63,15 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if not args.SERVICE and not args.config:
-        parser.error("Either --SERVICE/-s or --config/-c must be provided")
+    if not args.service and not args.config:
+        parser.error("Either --service/-s or --config/-c must be provided")
 
-    if args.SERVICE and not args.config and args.SERVICE not in ServiceRegistry.list_services():
+    if args.service and not args.config and args.service not in ServiceRegistry.list_services():
         parser.error(
-            f"Unknown service '{args.SERVICE}'. Available: {', '.join(ServiceRegistry.list_services())}"
+            f"Unknown service '{args.service}'. Available: {', '.join(ServiceRegistry.list_services())}"
         )
 
-    service_name = args.SERVICE
+    service_name = args.service
     if service_name is None:
         # Derive a stable service label from the custom config filename.
         service_name = Path(args.config).stem
