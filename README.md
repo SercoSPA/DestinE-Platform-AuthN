@@ -1,4 +1,12 @@
+![DestinE Banner](assets/DestinE-banner.jpg)
+
 # destinepyauth
+
+[![Tests](https://img.shields.io/github/actions/workflow/status/SercoSPA/DestinE-Platform-AuthN/ci.yml?branch=main&label=tests)](https://github.com/SercoSPA/DestinE-Platform-AuthN/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/SercoSPA/DestinE-Platform-AuthN?label=coverage)](https://codecov.io/gh/SercoSPA/DestinE-Platform-AuthN)
+[![PyPI](https://img.shields.io/pypi/v/destinepyauth)](https://pypi.org/project/destinepyauth/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/destinepyauth)](https://pypi.org/project/destinepyauth/)
+[![License](https://img.shields.io/pypi/l/destinepyauth)](https://github.com/SercoSPA/DestinE-Platform-AuthN/blob/main/LICENSE)
 
 A Python library for authenticating against DESP (Destination Earth Service Platform) services.
 
