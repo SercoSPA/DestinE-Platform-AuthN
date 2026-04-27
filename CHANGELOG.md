@@ -14,6 +14,10 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 - Use 'joserfc' library instead of deprecated 'authlib.jose'
 
+## added
+
+- badges and banner to readme including test status
+
 # [1.3.0] - 20-03-2026
 
 ## added
