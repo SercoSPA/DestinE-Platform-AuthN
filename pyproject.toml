@@ -19,7 +19,6 @@ dependencies = [
     "lxml",
     "pydantic",
     "requests",
-    "authlib",
     "joserfc",
     "PyYAML",
 ]
