@@ -20,6 +20,7 @@ dependencies = [
     "pydantic",
     "requests",
     "authlib",
+    "joserfc",
     "PyYAML",
 ]
 
