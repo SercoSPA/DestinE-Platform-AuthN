@@ -10,6 +10,10 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 # pre-release
 
+## fix
+
+- Use 'joserfc' library instead of deprecated 'authlib.jose'
+
 ## added
 
 - badges and banner to readme including test status
