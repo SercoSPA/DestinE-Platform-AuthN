@@ -6,6 +6,7 @@ in _exchange_token and _verify_and_decode methods.
 """
 
 import pytest
+import time
 from unittest.mock import MagicMock, patch
 
 from destinepyauth.authentication import AuthenticationService
@@ -92,7 +93,7 @@ class TestTokenVerification:
         config = BaseConfig(iam_client="test")
         auth_service = AuthenticationService(config=config)
 
-        # Mock the dependencies to make authlib_jwt.decode raise an exception
+        # Mock the dependencies to make joserfc_jwt.decode raise an exception
         with patch("destinepyauth.authentication.requests.get") as mock_get:
             # Setup OIDC config and JWKS responses
             mock_oidc_response = MagicMock()
@@ -103,8 +104,12 @@ class TestTokenVerification:
 
             mock_get.side_effect = [mock_oidc_response, mock_jwks_response]
 
-            with patch(
-                "destinepyauth.authentication.authlib_jwt.decode", side_effect=Exception("Invalid signature")
+            with (
+                patch("destinepyauth.authentication.KeySet.import_key_set", return_value=MagicMock()),
+                patch(
+                    "destinepyauth.authentication.joserfc_jwt.decode",
+                    side_effect=Exception("Invalid signature"),
+                ),
             ):
                 # Use a real-looking JWT format (3 base64 parts)
                 fake_token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5In0.eyJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20ifQ.fake_sig"  # pragma: allowlist secret
@@ -116,11 +121,12 @@ class TestTokenVerification:
         config = BaseConfig(iam_client="test")
         auth_service = AuthenticationService(config=config)
 
+        now = int(time.time())
         expected_claims = {
             "sub": "user@example.com",
             "iss": "https://auth.example.com",
-            "exp": 1234567890,
-            "iat": 1234567800,
+            "exp": now + 3600,
+            "iat": now - 10,
         }
 
         with patch("destinepyauth.authentication.requests.get") as mock_get:
@@ -133,14 +139,13 @@ class TestTokenVerification:
 
             mock_get.side_effect = [mock_oidc_response, mock_jwks_response]
 
-            # Mock successful decode and validation - make it dict-like
-            mock_claims = MagicMock()
-            mock_claims.validate = MagicMock()
-            # Make dict(mock_claims) work by implementing keys() and __getitem__
-            mock_claims.keys.return_value = expected_claims.keys()
-            mock_claims.__getitem__ = lambda self, key: expected_claims[key]
+            mock_token_obj = MagicMock()
+            mock_token_obj.claims = expected_claims
 
-            with patch("destinepyauth.authentication.authlib_jwt.decode", return_value=mock_claims):
+            with (
+                patch("destinepyauth.authentication.KeySet.import_key_set", return_value=MagicMock()),
+                patch("destinepyauth.authentication.joserfc_jwt.decode", return_value=mock_token_obj),
+            ):
                 fake_token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5In0.eyJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20ifQ.fake_sig"  # pragma: allowlist secret
                 result = auth_service._verify_and_decode(fake_token)
                 assert result == expected_claims

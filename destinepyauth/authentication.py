@@ -4,6 +4,7 @@ import getpass
 import json
 import logging
 import stat
+import time
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from typing import Tuple, Optional, Dict, Any
@@ -14,7 +15,8 @@ import requests
 from lxml import html
 from lxml.etree import ParserError
 
-from authlib.jose import JsonWebKey, jwt as authlib_jwt
+from joserfc import jwt as joserfc_jwt
+from joserfc.jwk import KeySet
 
 from destinepyauth.configs import BaseConfig
 from destinepyauth.exceptions import AuthenticationError, handle_http_errors
@@ -301,21 +303,33 @@ class AuthenticationService:
         jwks_uri = oidc_config["jwks_uri"]
 
         # ---- 3. Fetch JWKS ----
-        jwks = JsonWebKey.import_key_set(requests.get(jwks_uri).json())
+        jwks = KeySet.import_key_set(requests.get(jwks_uri).json())
 
         # ---- 4. Verify the token signature and claims ----
         try:
-            claims = authlib_jwt.decode(
+            token_obj = joserfc_jwt.decode(
                 token,
-                key=jwks,
-                claims_options={
-                    # Disable audience validation if needed
-                    "aud": {"essential": False},
-                },
+                jwks,
             )
-            # Standard claims validation (exp, nbf, iat, iss)
-            claims.validate(leeway=leeway)
-            claims = dict(claims)
+            claims = dict(token_obj.claims)
+
+            # Validate core registered claims with leeway, mirroring prior behavior.
+            now = int(time.time())
+            if claims.get("iss") != issuer:
+                raise AuthenticationError("Invalid token: issuer mismatch")
+
+            exp = claims.get("exp")
+            if exp is not None and now > int(exp) + leeway:
+                raise AuthenticationError("Token expired")
+
+            nbf = claims.get("nbf")
+            if nbf is not None and now + leeway < int(nbf):
+                raise AuthenticationError("Token not yet valid")
+
+            iat = claims.get("iat")
+            if iat is not None and now + leeway < int(iat):
+                raise AuthenticationError("Token was issued in the future")
+
             logger.info("Token verified successfully")
             logger.debug(json.dumps(claims, indent=2))
             return claims
