@@ -12,6 +12,7 @@ Each release can have sections: "Added", "Changed", "Deprecated", "Removed", "Fi
 
 ## changed
 
+- bump git checkout version from 6 to 7
 - bump version action-gh-release to v3
 
 # [1.3.1] - 27-04-2026
