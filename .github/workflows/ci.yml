@@ -25,22 +25,31 @@ jobs:
     - name: Run tests
       run: pytest
     - name: Highway authentication
+      if: github.actor != 'dependabot[bot]'
       run: python -c "from destinepyauth import get_token; get_token('highway')"
     - name: CacheB authentication
+      if: github.actor != 'dependabot[bot]'
       run: python -c "from destinepyauth import get_token; get_token('cacheb', write_netrc=True)"
     - name: DestinE Streamer authentication
+      if: github.actor != 'dependabot[bot]'
       run: python -c "from destinepyauth import get_token; get_token('streamer')"
     - name: Insula authentication
+      if: github.actor != 'dependabot[bot]'
       run: python -c "from destinepyauth import get_token; get_token('insula')"
     - name: Eden authentication
+      if: github.actor != 'dependabot[bot]'
       run: python -c "from destinepyauth import get_token; get_token('eden')"
     - name: DEA authentication
+      if: github.actor != 'dependabot[bot]'
       run: python -c "from destinepyauth import get_token; get_token('dea')"
     - name: HDA authentication
+      if: github.actor != 'dependabot[bot]'
       run: python -c "from destinepyauth import get_token; get_token('hda')"
     - name: Polytope authentication
+      if: github.actor != 'dependabot[bot]'
       run: python -c "from destinepyauth import get_token; get_token('polytope')"
     - name: CacheB authentication from config
+      if: github.actor != 'dependabot[bot]'
       run: destinepyauth -c ./destinepyauth/configs/cacheb.yaml
 
   run_pre-commit:
