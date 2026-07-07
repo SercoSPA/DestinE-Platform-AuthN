@@ -8,7 +8,6 @@ jobs:
 
   build_test:
     name: build_test
-    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     env:
       DESPAUTH_USER: ${{ secrets.DESPAUTH_USER }}
