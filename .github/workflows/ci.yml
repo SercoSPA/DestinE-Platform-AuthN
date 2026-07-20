@@ -65,6 +65,6 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v7
       - name: check changelog
-        uses: tarides/changelog-check-action@v3
+        uses: tarides/changelog-check-action@v4
         with:
           changelog: CHANGELOG.md
